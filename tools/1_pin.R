@@ -4,8 +4,20 @@
 
 # LIBS
 library (MoreTreeTools)
-library (paleobioDB)
+library (paleobioDB)]
 source (file.path ('tools', 'palaeo_tools.R'))
+
+calcMeanDiffs <- function (ed.changes) {
+  # calculate the mean differences in relative ED
+  difference <- starting <- rep (NA, ncol (ed.changes))
+  for (i in 1:ncol (ed.changes)) {
+    starting[i] <- mean (ed.changes[ ,i], na.rm=TRUE)
+    difference[i] <- mean (ed.changes[-nrow(ed.changes),i] - ed.changes[-1,i], na.rm=TRUE)
+  }
+  res <- data.frame (mean.start=starting, mean.difference=difference)
+  rownames (res) <- colnames (ed.changes)
+  res
+}
 
 # INPUT
 # use hominoids for test
@@ -13,124 +25,75 @@ data('hominoids')
 tree <- hominoids
 rm (hominoids)
 tree <- multi2di (tree)
-
-records <-  pbdb_occurrences (limit=10,
+tree <- drop.tip (tree, tip='Macaca mulatta')
+# get all ape records
+records <-  pbdb_occurrences (limit='all',
                               base_name="hominoidea", vocab="pbdb",
                               show=c("phylo", "ident"))
-# remove non-species
-records <- records[records$taxon_rank == 'species',]
-# merge occurrence records into species records
-records$taxon_no == records$taxon_no
-
-hist (records$early_age)
-
-res <- data.frame (name=NA, max.age=NA, min.age=NA)
 lineages <- list ()
 records$binomial <- paste0 (records$genus_name, '_', records$species_name)
 binomials <- unique (records$binomial)
 max.age <- min.age <- rep (NA, length (binomials))
+taxonomy <- c ('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')
 for (i in 1:length (binomials)) {
   binomial <- binomials[i]
   pull <- records$binomial == binomial
-  lineages[[i]] <- records[i, c ('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')]
+  # get age range for species
   max.age[i] <- max (records$early_age[pull])
   min.age[i] <- min (records$late_age[pull])
-}
-res <- data.frame (name=binomials, min.age, max.age)
-.mnGetLSR (qry=lineages[[1]], sbjcts=resolve.list$lineage)
-
-records <- data.frame (records, stringsAsFactors=FALSE)
-
-as.character (records[1, c ('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')])
-
-
-pinNames <- function (tree, names, fuzzy=TRUE, datasource=4,
-                      iterations=1, resolve.list=NULL) {
-  # SAFETY CHECK
-  if (iterations < 1) {
-    stop ('Iterations must be >=1')
-  }
-  if (!is.vector (names) && length (names) <= 1) {
-    stop ('Names must be a vector of more than 1 character string')
-  }
-  if (!class (tree) %in%  c ('phylo', 'multiPhylo')) {
-    stop ('Tree must be phylo or multiPhylo')
-  }
-  #TODO update addTip to handle node.label, for now drop node.label
-  # INIT
-  # drop underscores, check for branch lengths and drop node labels
-  tree <- .mnClean (tree)
-  names <- gsub ('_', ' ', names)
-  # find matching and non-matching names
-  tip.labels <- .mnGetNames (tree)
-  matching.names <- names[names %in% tip.labels]
-  nonmatching.names <- names[!names %in% tip.labels]
-  # stop now if all names match names in tree or fuzzy is false
-  if (!fuzzy || length (matching.names) == length (names)) {
-    return (.mnEarlyReturn (tree, names, iterations))
-  }
-  # VARIABLES AND ENVIRONMENTS
-  # place all parameters in an environment to save arguments
-  paraenv <- new.env (parent=emptyenv ())
-  if (class (tree) == 'multiPhylo') {
-    paraenv$trees <- tree
-    paraenv$start.tree <- tree[[sample (1:length (tree), 1)]]
-  } else {
-    paraenv$start.tree <- tree
-  }
-  paraenv$grow.tree <- paraenv$start.tree
-  paraenv$datasource <- datasource
-  paraenv$matching.names <- matching.names
-  paraenv$names <- names
-  # get query and subject resolved names
-  if (!is.null (resolve.list)) {
-    # if resolve.list provided, no need to do any searches
-    # unpack resolved names into qrylist and sbjctenv
-    pull <- resolve.list$resolved$search.name %in% nonmatching.names
-    if (sum (pull) < 1) {
-      return (.mnEarlyReturn (tree, names, iterations))
-    }
-    qrylist <- list ()
-    qrylist$resolved <- resolve.list$resolved[pull, ]
-    qrylist$lineages <- resolve.list$lineages[pull]
-    sbjctenv <- new.env (parent=emptyenv ())
-    sbjctenv$resolved <- resolve.list$resolved
-    sbjctenv$lineages <- resolve.list$lineages
-    paraenv$deja.vues <- tree$tip.label
-  } else {
-    # hold query name resolution results in a list
-    qrylist <- .mnResolve (names=nonmatching.names, paraenv=paraenv)
-    if (!nrow (qrylist$resolved) > 0) {  # stop now if none resolved
-      return (.mnEarlyReturn (tree, names, iterations))
-    }
-    # hold subject name resolution results in a single env
-    sbjctenv <- new.env (parent=emptyenv ())
-    .mnResolveUpdate (paraenv=paraenv, sbjctenv=sbjctenv)
-    # add qrylist results to sbjctenv
-    pull <- !as.vector (qrylist$resolved$search.name) %in%
-      as.vector (sbjctenv$resolved$search.name)
-    sbjctenv$resolved <- rbind (sbjctenv$resolved, qrylist$resolved[pull, ])
-    sbjctenv$lineages <- c (sbjctenv$lineages, qrylist$lineages[pull])
-  }
-  # hold all resulting trees and stats in a single env
-  resenv <- new.env (parent=emptyenv ())
-  resenv$trees <- list ()
-  # ITERATE
-  # loop through for each iteration, write results to resenv
-  m_ply (.data=data.frame(iteration=1:iterations), .fun=.mnMap,
-         resenv=resenv, qrylist=qrylist, sbjctenv=sbjctenv,
-         paraenv=paraenv)
-  # RETURN
-  if (length (resenv$trees) > 1) {
-    trees <- resenv$trees
-    class (trees) <- 'multiPhylo'
-  } else {
-    trees <- resenv$trees[[1]]
-  }
-  return (trees)
+  # extract PDBD taxonomy
+  lineage <- records[which(pull)[1], taxonomy, drop=TRUE]
+  lineages[[i]] <- as.vector(unlist (lineage))
 }
 
+pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
+                     min.ages=min.age, max.ages=max.age)
+plot (pin.res)
+# take timeslices of pin.res
+steps <- 10
+age <- max (diag (vcv.phylo (pin.res)))
+interval <- age/steps
+intervals <- seq (from=interval, to=age, by=interval)
+all.node.labels <- paste0 ('n', 1:(length (pin.res$tip.label) + pin.res$Nnode))
+res <- matrix (nrow=steps, ncol=length (all.node.labels))
+colnames (res) <- all.node.labels
+for (i in 1:steps) {
+  # slice tree at interval
+  sliced <- getTimeslice (tree=pin.res, time.slice=intervals[i],
+                          all.node.labels=all.node.labels)
+  # get ed vals
+  ed.res <- calcED (sliced)
+  # normalise by PD
+  ed.res$ED <- ed.res$ED/sum (sliced$edge.length)
+  # add to res
+  indexes <- match (rownames(ed.res), all.node.labels)
+  res[i,indexes] <- ed.res[,1]
+}
+# how does the starting ED predict the future ED?
+diff.res <- calcMeanDiffs (res)
+plot (abs(diff.res$mean.difference) ~ diff.res$mean.start)
 
+
+# Leftover
+
+plot (pin.res)
+
+pin.res$all.node.label <- 1:(length (pin.res$tip.label) + pin.res$Nnode)
+par(mfrow=c(1,2))
+display.tree <- pin.res
+display.tree$tip.label <- display.tree$all.node.label[1:length(display.tree$tip.label)]
+plot(display.tree);nodelabels(text=display.tree$all.node.label[
+  (length(display.tree$tip.label)+1):length(display.tree$all.node.label)])
+axisPhylo()
+# does starting ED predict change in ED?
+ed.diffs <- ed.res$t1 - ed.res$t2
+plot (ed.diffs ~ ed.res$t2)
+
+clade.refs <- list ()
+all.node.labels <- paste0 ('c', 1:(length (tree$tip.label) + tree$Nnode))
+clade.refs['c1'] <- list('', children=getChildren(pin.res))
+
+plot (sliced);axisPhylo()
 
 
 
