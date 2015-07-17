@@ -5,6 +5,7 @@
 # PARAMETERS
 parent <- "hominoidea"  # name of parent clade for species in tree
 iterations <- 100  # number of trees
+overwrite <- FALSE
 
 # DIRS
 output.dir <- '1_pin'
@@ -26,14 +27,19 @@ tree <- multi2di (tree)
 tree <- drop.tip (tree, tip='Macaca mulatta')
 
 # PALEODB
-records <-  pbdb_occurrences (limit='all',
-                              base_name=parent, vocab="pbdb",
-                              show=c("phylo", "ident"))
+if (overwrite | !file.exists (file.path (output.dir, 'palaeo_records.csv'))) {
+  records <-  pbdb_occurrences (limit='all',
+                                base_name=parent, vocab="pbdb",
+                                show=c("phylo", "ident"))
+} else {
+  records <- read.csv (file=file.path (output.dir, 'palaeo_records.csv'))
+}
 
 # EXTRACT NAMES + LINEAGES
 taxonomy <- c ('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')
 lineages <- list ()
-records$binomial <- paste0 (records$genus_name, '_', records$species_name)
+records$binomial <- paste0 (records$genus_name, ' ', records$species_name)
+records <- records[!records$binomial %in% tree$tip.label, ]
 binomials <- unique (records$binomial)
 max.age <- min.age <- rep (NA, length (binomials))
 for (i in 1:length (binomials)) {
