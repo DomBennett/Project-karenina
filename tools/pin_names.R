@@ -283,6 +283,89 @@ mapNames <- function (tree, names, fuzzy=TRUE, datasource=4,
     paraenv$start.tree <- paraenv$trees[[sample (1:length (paraenv$trees), 1)]]
   }
 }
+.mnAddTipWAge <- function (tree, tip.is, new.name,
+                           min.age, max.age) {
+  # add new tip
+  if (length (tip.is) == 1) {
+    edge <- which (tip.is == tree$edge[ ,2])
+    edge.age <- getAge (tree, edge=edge)
+    pull <- edge.age$max.age >= max.age
+    if (!pull) {
+      edge <- NA
+    }
+  } else {
+    # randomly map new tip to any edge in the clade
+    # represented by the matching tip.is
+    # find the parent node of all the matching tips
+    children <- tree$tip.label[tip.is]
+    parent.node <- getParent (tree, tips=children)
+    # get all descending
+    edges <- getEdges(tree, node=parent.node)
+    # INCLUDING supporting edge!!!
+    edges <- c (edges, which (tree$edge[ ,2] ==parent.node))
+    # check ages
+    edge.ages <- getAge (tree, edge=edges)
+    pull <- edge.ages$max.age >= max.age
+    edges <- edges[pull]
+    # choose edge at random
+    if (length (edges) > 1) {
+      edge <- sample (edges, size=1)
+    } else {
+      edge <- edges[1]
+    }
+  }
+  # exit if no suitable edge found
+  if (is.na (edge)) {
+    return (tree)
+  }
+  # random tip and node age
+  age.range <- getAge (tree, edge=edge)
+  if (max.age < age.range[1, 'min.age']) {
+    min.node.age <- age.range[1, 'min.age']
+  } else {
+    min.node.age <- max.age
+  }
+  node.age <- runif (n=1, min=min.node.age,
+                     max=age.range[1, 'max.age'])
+  tip.age <- runif (n=1, min=min.age, max=node.age)
+  tree <- addTip (tree, edge=edge, tip.name=new.name, node.age=node.age,
+                  tip.age=tip.age)
+  return (tree)
+}
+.mnAddTip <- function (tree, tip.is, new.name) {
+  # add new tip
+  if (length (tip.is) == 1) {
+    # add to the pendant edge at a random time point
+    edge <- which (tip.is == tree$edge[ ,2])
+  } else {
+    # randomly map new tip to any edge in the clade
+    # represented by the matching tip.is
+    # find the parent node of all the matching tips
+    children <- tree$tip.label[tip.is]
+    parent.node <- getParent (tree, tips=children)
+    # get descending and supporting edges
+    edges <- which (tree$edge[ ,1] == parent.node)
+    edges <- c (edges, which (tree$edge[ ,2] == parent.node))
+    # choose edge at random, bias sample based on branch length
+    edge <- sample (edges, size=1, prob=tree$edge.length[edges])
+  }
+  # random node age somewhere on edge
+  age.range <- getAge (tree, edge=edge)
+  node.age <- runif (n=1, min=age.range[1, 'min.age'],
+                     max=age.range[1, 'max.age'])
+  # random tip age if not ultrametric
+  if (is.ultrametric (tree)) {
+    tip.age <- 0
+  } else {
+    # use random tip age in shared clade
+    possibles <- getAge (tree, node=tip.is)$age
+    possibles <- possibles[possibles < node.age]
+    tip.age <- runif (n=1, min=min(possibles), max=max(possibles))
+  }
+  tree <- addTip (tree, edge=edge, tip.name=new.name, node.age=node.age,
+                  tip.age=tip.age)
+  return (tree)
+}
 .mnResolve <- function (names, paraenv) {
   # Resolve names using taxaResolve, return list of taxaResolve
   #  dataframe and a list of lineages for each name
@@ -363,85 +446,6 @@ mapNames <- function (tree, names, fuzzy=TRUE, datasource=4,
   res$resolved <- res$resolved[!not.in.tree, ]
   res$lineages <- res$lineages[!not.in.tree]
   return (res)
-}
-.mnAddTipWAge <- function (tree, tip.is, new.name,
-                           min.age, max.age) {
-  print(new.name)
-  # add new tip
-  if (length (tip.is) == 1) {
-    edge <- which (tip.is == tree$edge[ ,2])
-    edge.age <- getAge (tree, edge=edge)
-    pull <- edge.age$max.age >= max.age
-    if (!pull) {
-      edge <- NA
-    }
-  } else {
-    # randomly map new tip to any edge in the clade
-    # represented by the matching tip.is
-    # find the parent node of all the matching tips
-    children <- tree$tip.label[tip.is]
-    parent.node <- getParent (tree, tips=children)
-    # get all descending
-    edges <- getEdges(tree, node=parent.node)
-    # INCLUDING supporting edge!!!
-    edges <- c (edges, which (tree$edge[ ,2] ==parent.node))
-    # check ages
-    edge.ages <- getAge (tree, edge=edges)
-    pull <- edge.ages$max.age >= max.age
-    edges <- edges[pull]
-    # choose edge at random
-    if (length (edges) > 1) {
-      edge <- sample (edges, size=1)
-    } else {
-      edge <- edges[1]
-    }
-  }
-  # exit if no suitable edge found
-  if (!is.numeric (edge)) {
-    return (tree)
-  }
-  # random tip and node age
-  age.range <- getAge (tree, edge=edge)
-  node.age <- runif (n=1, min=age.range[1, 'max.age'],
-                     max=age.range[1, 'max.age'])
-  tip.age <- runif (n=1, min=min.age, max=node.age)
-  tree <- addTip (tree, edge=edge, tip.name=new.name, node.age=node.age,
-                  tip.age=tip.age)
-  return (tree)
-}
-.mnAddTip <- function (tree, tip.is, new.name) {
-  # add new tip
-  if (length (tip.is) == 1) {
-    # add to the pendant edge at a random time point
-    edge <- which (tip.is == tree$edge[ ,2])
-  } else {
-    # randomly map new tip to any edge in the clade
-    # represented by the matching tip.is
-    # find the parent node of all the matching tips
-    children <- tree$tip.label[tip.is]
-    parent.node <- getParent (tree, tips=children)
-    # get descending and supporting edges
-    edges <- which (tree$edge[ ,1] == parent.node)
-    edges <- c (edges, which (tree$edge[ ,2] == parent.node))
-    # choose edge at random, bias sample based on branch length
-    edge <- sample (edges, size=1, prob=tree$edge.length[edges])
-  }
-  # random node age somewhere on edge
-  age.range <- getAge (tree, edge=edge)
-  node.age <- runif (n=1, min=age.range[1, 'min.age'],
-                     max=age.range[1, 'max.age'])
-  # random tip age if not ultrametric
-  if (is.ultrametric (tree)) {
-    tip.age <- 0
-  } else {
-    # use random tip age in shared clade
-    possibles <- getAge (tree, node=tip.is)$age
-    possibles <- possibles[possibles < node.age]
-    tip.age <- runif (n=1, min=min(possibles), max=max(possibles))
-  }
-  tree <- addTip (tree, edge=edge, tip.name=new.name, node.age=node.age,
-                  tip.age=tip.age)
-  return (tree)
 }
 .mnExtract <- function (tree, names) {
   # return tree representing names
