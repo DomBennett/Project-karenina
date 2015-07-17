@@ -1,15 +1,33 @@
-## No copyright, no warranty
-## Dominic John Bennett
-## Functions for calculating LFI
-## 07/02/2014
+# D.J. Bennett
+# 17/07/2015
+# Tools for ED and fossils
 
-## Dependencies
-require (ape)
-require (geiger)
-require (plyr)
-library (graphics)
+calcEDBySlice <- function (tree, time.cuts) {
+  # Return ED values for clades at different time slices
+  # for time callibrated tree
+  age <- max (diag (vcv.phylo (tree)))
+  interval <- age/time.cuts
+  intervals <- seq (from=interval, to=age, by=interval)
+  all.node.labels <- paste0 ('n', 1:(length (tree$tip.label) + tree$Nnode))
+  res <- matrix (nrow=time.cuts, ncol=length (all.node.labels))
+  rownames (res) <- as.character (intervals)
+  colnames (res) <- all.node.labels
+  for (i in 1:time.cuts) {
+    # slice tree at interval
+    sliced <- getTimeslice (tree=tree, time.slice=intervals[i],
+                            all.node.labels=all.node.labels)
+    # get ed vals
+    ed.res <- calcED (sliced)
+    # normalise by PD
+    ed.res$ED <- ed.res$ED/sum (sliced$edge.length)
+    # add to res
+    indexes <- match (rownames(ed.res), all.node.labels)
+    res[i,indexes] <- ed.res[,1]
+  }
+  return (res)
+}
 
-## Functions
+
 getTimeslice <- function (tree, time.slice,
                           all.node.ages=getAge (tree)$age,
                           all.node.labels=paste0 ('c', 1:(length (tree$tip.label) +
