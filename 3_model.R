@@ -31,12 +31,22 @@ for (i in 1:length (ed.slices)) {
   #      xlab=expression('ED'['t=0']),
   #      ylab=expression('ED'['t=1']),)
   #abline (a=0, b=1)
+  # clean data
   model.data <- data.frame (t1, t0)
   pull <- rowSums (model.data)
   pull <- !is.infinite (pull) & !is.na (pull)
   model.data <- model.data[pull, ]
-  #cor.p <- corPagel(1, pin.res, fixed=FALSE)
-  model <- gls (t1 ~ t0, data=model.data, method="ML")
+  # get cormatrix
+  dmat <- cor (dist.nodes (trees[[i]]))
+  nnode <- getSize (trees[[i]]) + trees[[i]]$Nnode
+  all.node.labels <- paste0 ('n', 1:nnode)
+  colnames (dmat) <- rownames (dmat) <- all.node.labels
+  corobj <- corSymm (1)
+  corobj <- Initialize.corPhyl
+  dmat[lower.tri (dmat)], fixed=TRUE
+  corMatrix (corr=dmat)
+  summary (corobj)
+  model <- gls (t1 ~ t0, data=model.data, method="ML", correlation=corobj)
   slopes[i] <- model$coefficients[2]
 }
 sum (slopes > 1)/length (slopes)
