@@ -3,7 +3,7 @@
 # Pin fossils to phylogenies using PBDB
 
 # PARAMETERS
-parent <- "hominoidea"  # name of parent clade for species in tree
+parent <- "primates"  # name of parent clade for species in tree
 iterations <- 100  # number of trees
 overwrite <- FALSE
 
@@ -20,19 +20,20 @@ source (file.path ('tools', 'pin_names.R'))
 
 # INPUT
 # use hominoids for test
-data('hominoids')
-tree <- hominoids
-rm (hominoids)
+data ('catarrhines')
+tree <- catarrhines
+rm (catarrhines)
 tree <- multi2di (tree)
-tree <- drop.tip (tree, tip='Macaca mulatta')
+#tree <- drop.tip (tree, tip='Macaca mulatta')
 
 # PALEODB
-if (overwrite | !file.exists (file.path (output.dir, 'palaeo_records.csv'))) {
+fossilfile <- paste0 (parent, '_records.csv')
+if (overwrite | !file.exists (file.path (output.dir, fossilfile))) {
   records <-  pbdb_occurrences (limit='all',
                                 base_name=parent, vocab="pbdb",
                                 show=c("phylo", "ident"))
 } else {
-  records <- read.csv (file=file.path (output.dir, 'palaeo_records.csv'))
+  records <- read.csv (file=file.path (output.dir, fossilfile))
 }
 
 # EXTRACT NAMES + LINEAGES
@@ -59,6 +60,6 @@ pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
                      iterations=iterations)
 
 # OUTPUT
-write.csv (records, file=file.path (output.dir, 'palaeo_records.csv'),
+write.csv (records, file=file.path (output.dir, fossilfile),
            row.names=FALSE)
 write.tree (pin.res, file=file.path (output.dir, 'pinned.tre'))
