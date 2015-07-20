@@ -21,17 +21,24 @@ trees <- read.tree (file.path (input.dir, 'pinned.tre'))
 
 # CALC ED BY TIMESLICE
 res <- list ()  # list of matrices
-nodedict <- list ()
+nodedicts <- list ()
+constraint.trees <- list ()
 for (i in 1:length (trees)) {
+  # get ED by timeslice
   part.res <- calcEDBySlice (trees[[i]], time.cuts)
   res <- c (res, list (part.res))
-  nnode <- getSize (trees[[i]]) + trees[[i]]$Nnode
-  for (j in 1:nnode) {
-    node.name <- paste0 ('n', j)
-    nodedict[node.name] <- list (getChildren (trees[[i]], j))
-  }
+  # get nodedict for tree
+  nodedict <- getNodedict (trees[[i]])
+  nodedicts <- c (nodedicts, list (nodedict))
+  # get constraint tree
+  constraint.tree <- addTips2Nodes (trees[[i]])
+  constraint.trees <- c (constraint.trees,
+                         list (constraint.tree))
 }
+class (constraint.trees) <- 'multiPhylo'
 
 # OUTPUT
 save (res, file=file.path (output.dir, 'ed_slices.Rd'))
 save (nodedict, file=file.path (output.dir, 'nodedict.Rd'))
+write.tree (constraint.trees,
+            file=file.path (output.dir, 'constraint_trees.tre'))
