@@ -18,9 +18,9 @@ trees <- read.tree (file.path (input.dir, 'constraint_trees.tre'))
 
 # PROCESS
 # loop through results from each tree
-slopes <- rep (NA, length (ed.slices))
+slopes <- res.slopes <- rep (NA, length (ed.slices))
 for (i in 1:length (ed.slices)) {
-  ed.slice <- ed.slices[[i]]
+  ed.slice <- log (ed.slices[[i]])
   # construct t0 and t1 by clade
   filler <- rep (NA, ncol (ed.slice))
   model.data <- data.frame (mean.ed=filler,
@@ -41,6 +41,10 @@ for (i in 1:length (ed.slices)) {
   model <- gls (mean.diff ~ mean.ed, data=model.data, method="ML",
                 correlation=corPagel(value=1, phy=tree, fixed=TRUE))
   slopes[i] <- model$coefficients[2]
+  model.data$residuals <- abs (model$residuals)
+  model.res <- gls (residuals ~ mean.ed, data=model.data, method="ML",
+                    correlation=corPagel(value=1, phy=tree, fixed=TRUE))
+  res.slopes[i] <- model.res$coefficients[2]
 }
 # slope > 1: ED becomes more ED
 # slope == 1: ED does not change
@@ -50,3 +54,13 @@ sum (slopes > 0) / length (slopes)
 mean (slopes)
 hist (slopes)
 t.test(slopes)
+# TODO -- calc heterosc
+# res.slope > 0: high ED species act differently (i.e. oppositely to the model)
+# res.slope < 0: low ED species act differently
+sum (res.slopes > 0) / length (slopes)
+mean (res.slopes)
+hist (res.slopes)
+t.test (res.slopes)
+# These results show the opposite of what I'd expect for a living fossil.
+# They're more consistent with relicts, but perhaps phylogenetic scale will
+# play a big role.
