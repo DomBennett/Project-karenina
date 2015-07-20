@@ -1,7 +1,6 @@
 # D.J. Bennett
 # 18/07/2015
 # Model EDt=1 ~ EDt=0
-# TODO: look up how to build correlation matrix
 
 # DIRS
 input.dir <- '2_slice'
@@ -12,9 +11,10 @@ if (!file.exists (output.dir)) {
 
 # INPUT
 load (file=file.path (input.dir, 'ed_slices.Rd'))
-#load (file=file.path (input.dir, 'nodedict.Rd'))
+load (file=file.path (input.dir, 'nodedict.Rd'))
 ed.slices <- res
 rm (res)
+trees <- read.tree (file.path (input.dir, 'constraint_trees.tre'))
 
 # PROCESS
 # loop through results from each tree
@@ -22,32 +22,31 @@ slopes <- rep (NA, length (ed.slices))
 for (i in 1:length (ed.slices)) {
   ed.slice <- ed.slices[[i]]
   # construct t0 and t1 by clade
-  t1 <- t0 <- NULL
+  filler <- rep (NA, ncol (ed.slice))
+  model.data <- data.frame (mean.ed=filler,
+                            mean.diff=filler)
+  rownames (model.data) <- colnames (ed.slice)
   for (j in 1:ncol (ed.slice)) {
-    t1 <- c (t1, ed.slice[-1,j])
-    t0 <- c (t0, ed.slice[-nrow (ed.slice),j])
+    t0 <- ed.slice[-1,j]
+    t1 <- ed.slice[-nrow (ed.slice),j]
+    model.data[j, 'mean.ed'] <- mean (ed.slice[ ,j], na.rm=TRUE)
+    model.data[j, 'mean.diff'] <- mean (t1-t0, na.rm=TRUE)
   }
-  #plot (t1 ~ t0,
-  #      xlab=expression('ED'['t=0']),
-  #      ylab=expression('ED'['t=1']),)
-  #abline (a=0, b=1)
   # clean data
-  model.data <- data.frame (t1, t0)
   pull <- rowSums (model.data)
   pull <- !is.infinite (pull) & !is.na (pull)
   model.data <- model.data[pull, ]
-  # get cormatrix
-  dmat <- cor (dist.nodes (trees[[i]]))
-  nnode <- getSize (trees[[i]]) + trees[[i]]$Nnode
-  all.node.labels <- paste0 ('n', 1:nnode)
-  colnames (dmat) <- rownames (dmat) <- all.node.labels
-  corobj <- corSymm (1)
-  corobj <- Initialize.corPhyl
-  dmat[lower.tri (dmat)], fixed=TRUE
-  corMatrix (corr=dmat)
-  summary (corobj)
-  model <- gls (t1 ~ t0, data=model.data, method="ML", correlation=corobj)
+  pull <- !trees[[i]]$tip.label %in% rownames (model.data)
+  tree <- drop.tip (trees[[i]], tip=trees[[i]]$tip.label[pull])
+  model <- gls (mean.diff ~ mean.ed, data=model.data, method="ML",
+                correlation=corPagel(value=1, phy=tree, fixed=TRUE))
   slopes[i] <- model$coefficients[2]
 }
-sum (slopes > 1)/length (slopes)
+# slope > 1: ED becomes more ED
+# slope == 1: ED does not change
+# slope == 0: ED is independent of past ED
+# slope < 0: ED becomes less ED
+sum (slopes > 0) / length (slopes)
 mean (slopes)
+hist (slopes)
+t.test(slopes)
