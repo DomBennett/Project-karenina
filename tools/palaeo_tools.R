@@ -2,6 +2,38 @@
 # 17/07/2015
 # Tools for ED and fossils
 
+addTips2Nodes <- function (tree) {
+  # Return a tree with new tips at every node
+  # All tips labelled N1-NNode
+  nodedict <- getNodedict (tree)
+  for (i in 1:length (nodedict)) {
+    # ignore tips with only one descendant
+    if (length (nodedict[[i]]) < 2) {
+      next
+    }
+    children <- nodedict[[i]]
+    node <- getParent (tree, tip=children)
+    edge <- which (tree$edge[ ,1] == node)[1]
+    node.age <- getAge (tree, node=node)[,2]
+    tree <- addTip (tree=tree, edge=edge,
+                    node.age=node.age, tip.age=node.age,
+                    tip.name=names (nodedict)[i])
+  }
+  tree$tip.label <- paste0 ('n', 1:getSize (tree))
+  tree
+}
+
+getNodedict <- function (tree) {
+  # Return a list of each node and its children
+  nodedict <- list ()
+  nnode <- getSize (tree) + tree$Nnode
+  for (i in 1:nnode) {
+    node.name <- paste0 ('n', i)
+    nodedict[node.name] <- list (getChildren (tree, i))
+  }
+  nodedict
+}
+
 calcEDBySlice <- function (tree, time.cuts) {
   # Return ED values for clades at different time slices
   # for time callibrated tree
