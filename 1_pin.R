@@ -3,11 +3,12 @@
 # Pin fossils to phylogenies using PBDB
 
 # PARAMETERS
-parent <- "primates"  # name of parent clade for species in tree
+parent <- "mammalia"  # name of parent clade for species in tree
 iterations <- 100  # number of trees
 overwrite <- FALSE
 
 # DIRS
+input.dir <- '0_data'
 output.dir <- '1_pin'
 if (!file.exists (output.dir)) {
   dir.create (output.dir)
@@ -19,12 +20,8 @@ library (paleobioDB)
 source (file.path ('tools', 'pin_names.R'))
 
 # INPUT
-# use hominoids for test
-data ('catarrhines')
-tree <- catarrhines
-rm (catarrhines)
+tree <- read.tree (file.path (input.dir, 'bininda_mammalia.tre'))
 tree <- multi2di (tree)
-#tree <- drop.tip (tree, tip='Macaca mulatta')
 
 # PALEODB
 fossilfile <- paste0 (parent, '_records.csv')
