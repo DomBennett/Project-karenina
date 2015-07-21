@@ -64,3 +64,4 @@ t.test (res.slopes)
 # These results show the opposite of what I'd expect for a living fossil.
 # They're more consistent with relicts, but perhaps phylogenetic scale will
 # play a big role.
+save (slopes, res.slopes, model.data, file=file.path (output.dir, 'stats.Rd'))
