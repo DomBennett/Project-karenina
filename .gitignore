@@ -7,3 +7,10 @@
 *.csv
 *.Rd
 *.tre
+0_data/
+1_pin/
+2_slice/
+3_model/
+
+# mac
+.DS_Store
