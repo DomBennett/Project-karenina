@@ -2,6 +2,13 @@
 # 18/07/2015
 # Model EDt=1 ~ EDt=0
 
+# PARAMETERS
+load ('parameters.Rd')
+
+# LIBS
+library (ape)
+library (nlme)
+
 # DIRS
 input.dir <- '2_slice'
 output.dir <- '3_model'
@@ -12,6 +19,7 @@ if (!file.exists (output.dir)) {
 # INPUT
 load (file=file.path (input.dir, 'ed_slices.Rd'))
 load (file=file.path (input.dir, 'nodedict.Rd'))
+load (file=file.path (input.dir, 'randbool.Rd'))
 ed.slices <- res
 rm (res)
 trees <- read.tree (file.path (input.dir, 'constraint_trees.tre'))
@@ -50,10 +58,12 @@ for (i in 1:length (ed.slices)) {
 # slope == 1: ED does not change
 # slope == 0: ED is independent of past ED
 # slope < 0: ED becomes less ED
-sum (slopes > 0) / length (slopes)
-mean (slopes)
-hist (slopes)
-t.test(slopes)
+rand.slopes <- slopes[rand.bool]
+pin.slopes <- slopes[!rand.bool]
+sum (pin.slopes > mean (rand.slopes, na.rm=TRUE)) / length (pin.slopes)
+mean (pin.slopes)
+hist (pin.slopes)
+t.test (pin.slopes, rand.slopes)
 # TODO -- calc heterosc
 # res.slope > 0: high ED species act differently (i.e. oppositely to the model)
 # res.slope < 0: low ED species act differently

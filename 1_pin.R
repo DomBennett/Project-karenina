@@ -2,10 +2,11 @@
 # 15/07/2015
 # Pin fossils to phylogenies using PBDB
 
+# TIMESTAMP
+cat (paste0 ('\nPinning started at [', Sys.time (), ']'))
+
 # PARAMETERS
-parent <- "mammalia"  # name of parent clade for species in tree
-iterations <- 100  # number of trees
-overwrite <- FALSE
+load ('parameters.Rd')
 
 # DIRS
 input.dir <- '0_data'
@@ -17,18 +18,27 @@ if (!file.exists (output.dir)) {
 # LIBS
 library (MoreTreeTools)
 library (paleobioDB)
-source (file.path ('tools', 'pin_names.R'))
+source (file.path ('tools', 'palaeo_tools.R'))
 
 # INPUT
-tree <- read.tree (file.path (input.dir, 'bininda_mammalia.tre'))
-tree <- multi2di (tree)
+# tree <- read.tree (file.path (input.dir, treefile))
+# tree <- mapNames (tree, names=sample (tree$tip.label, 1000),
+#                   fuzzy=FALSE)
+# tree <- multi2di (tree)
+data ('catarrhines')
+tree <- catarrhines
+rm (catarrhines)
 
 # PALEODB
 fossilfile <- paste0 (parent, '_records.csv')
 if (overwrite | !file.exists (file.path (output.dir, fossilfile))) {
+  # get
   records <-  pbdb_occurrences (limit='all',
                                 base_name=parent, vocab="pbdb",
                                 show=c("phylo", "ident"))
+  # write out
+  write.csv (records, file=file.path (output.dir, fossilfile),
+             row.names=FALSE)
 } else {
   records <- read.csv (file=file.path (output.dir, fossilfile))
 }
@@ -52,11 +62,24 @@ for (i in 1:length (binomials)) {
 }
 
 # PIN
-pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
-                     min.ages=min.age, max.ages=max.age,
-                     iterations=iterations)
+names <- tree$tip.label
+resolve.list <- mapNamesPreDownload(names, datasource = 4)
+pin.res <- pin (tree=tree, names=binomials, lineages=lineages,
+                min.ages=min.age, max.ages=max.age,
+                iterations=iterations, resolve.list=resolve.list)
+pinfile <- paste0 (parent, '_pinned.tre')
+write.tree (pin.res, file=file.path (output.dir, pinfile))
+# randomise ages
+randis <- sample (1:length (lineages))
+min.age <- min.age[randis]
+max.age <- max.age[randis]
+# randomise linages
+lineages <- lineages[sample (1:length (lineages))]
+rand.res <- pin (tree=tree, names=binomials, lineages=lineages,
+                 min.ages=min.age, max.ages=max.age,
+                 iterations=iterations, resolve.list=resolve.list)
+randfile <- paste0 (parent, '_rand.tre')
+write.tree (pin.res, file=file.path (output.dir, randfile))
 
-# OUTPUT
-write.csv (records, file=file.path (output.dir, fossilfile),
-           row.names=FALSE)
-write.tree (pin.res, file=file.path (output.dir, 'pinned.tre'))
+# TIMESTAMP
+cat (paste0 ('\nPinning finished at [', Sys.time (), ']'))

@@ -2,8 +2,11 @@
 # 18/07/2015
 # Take time slices of time-callibrated trees
 
+# TIMESTAMP
+cat (paste0 ('\nSlicing started at [', Sys.time (), ']'))
+
 # PARAMETERS
-time.cuts <- 10
+load ('parameters.Rd')
 
 # DIRS
 input.dir <- '1_pin'
@@ -17,7 +20,13 @@ library (MoreTreeTools)
 source (file.path ('tools', 'palaeo_tools.R'))
 
 # INPUT
-trees <- read.tree (file.path (input.dir, 'pinned.tre'))
+pinfile <- paste0 (parent, '_pinned.tre')
+pin.trees <- read.tree (file.path (input.dir, pinfile))
+randfile <- paste0 (parent, '_rand.tre')
+rand.trees <- read.tree (file.path (input.dir, randfile))
+trees <- c (pin.trees, rand.trees)
+rand.bool <- c (rep (FALSE, length (pin.trees)),
+                rep (TRUE, length (rand.trees)))
 
 # CALC ED BY TIMESLICE
 res <- list ()  # list of matrices
@@ -38,7 +47,11 @@ for (i in 1:length (trees)) {
 class (constraint.trees) <- 'multiPhylo'
 
 # OUTPUT
+save (rand.bool, file=file.path (output.dir, 'randbool.Rd'))
 save (res, file=file.path (output.dir, 'ed_slices.Rd'))
 save (nodedict, file=file.path (output.dir, 'nodedict.Rd'))
 write.tree (constraint.trees,
             file=file.path (output.dir, 'constraint_trees.tre'))
+
+# TIMESTAMP
+cat (paste0 ('\nSlicing finished at [', Sys.time (), ']'))
