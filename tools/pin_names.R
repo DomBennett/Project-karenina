@@ -387,7 +387,9 @@ mapNames <- function (tree, names, fuzzy=TRUE, datasource=4,
   # get lowest shared ranks between qry lineage and subject lineages
   tds <- rep (NA, length (sbjcts))
   for (i in 1:length (sbjcts)) {
-    tds[i] <- max (which (qry %in% sbjcts[[i]]))
+    if (any (qry %in% sbjcts[[i]])) {
+      tds[i] <- max (which (qry %in% sbjcts[[i]]))
+    }
   }
   tds
 }
