@@ -30,9 +30,11 @@ tree <- catarrhines
 rm (catarrhines)
 
 # PALEODB
+cat ('\nRetrieving records ....')
 fossilfile <- paste0 (parent, '_records.csv')
 if (overwrite | !file.exists (file.path (output.dir, fossilfile))) {
   # get
+  cat ('\n.... searching PBDB')
   records <-  pbdb_occurrences (limit='all',
                                 base_name=parent, vocab="pbdb",
                                 show=c("phylo", "ident"))
@@ -40,10 +42,13 @@ if (overwrite | !file.exists (file.path (output.dir, fossilfile))) {
   write.csv (records, file=file.path (output.dir, fossilfile),
              row.names=FALSE)
 } else {
+  cat ('\n.... pre-loading file')
   records <- read.csv (file=file.path (output.dir, fossilfile))
 }
+cat ('\nDone.')
 
 # EXTRACT NAMES + LINEAGES
+cat ('\nAssembling records for pinning ....')
 taxonomy <- c ('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')
 lineages <- list ()
 records$binomial <- paste0 (records$genus_name, ' ', records$species_name)
@@ -60,10 +65,13 @@ for (i in 1:length (binomials)) {
   lineage <- records[which(pull)[1], taxonomy, drop=TRUE]
   lineages[[i]] <- as.vector(unlist (lineage))
 }
+cat ('\nDone.')
 
 # PIN
+cat ('\nPinning ....')
 names <- tree$tip.label
 resolve.list <- mapNamesPreDownload(names, datasource = 4)
+cat ('\n.... real')
 pin.res <- pin (tree=tree, names=binomials, lineages=lineages,
                 min.ages=min.age, max.ages=max.age,
                 iterations=iterations, resolve.list=resolve.list)
@@ -75,11 +83,13 @@ min.age <- min.age[randis]
 max.age <- max.age[randis]
 # randomise linages
 lineages <- lineages[sample (1:length (lineages))]
+cat ('\n.... random')
 rand.res <- pin (tree=tree, names=binomials, lineages=lineages,
                  min.ages=min.age, max.ages=max.age,
                  iterations=iterations, resolve.list=resolve.list)
 randfile <- paste0 (parent, '_rand.tre')
 write.tree (pin.res, file=file.path (output.dir, randfile))
+cat ('\nDone.')
 
 # TIMESTAMP
 cat (paste0 ('\nPinning finished at [', Sys.time (), ']'))
