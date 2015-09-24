@@ -21,13 +21,7 @@ library (paleobioDB)
 source (file.path ('tools', 'palaeo_tools.R'))
 
 # INPUT
-# tree <- read.tree (file.path (input.dir, treefile))
-# tree <- mapNames (tree, names=sample (tree$tip.label, 1000),
-#                   fuzzy=FALSE)
-# tree <- multi2di (tree)
-data ('catarrhines')
-tree <- catarrhines
-rm (catarrhines)
+tree <- read.tree (file.path (input.dir, treefile))
 
 # PALEODB
 cat ('\nRetrieving records ....')
@@ -70,7 +64,13 @@ cat ('\nDone.')
 # PIN
 cat ('\nPinning ....')
 names <- tree$tip.label
-resolve.list <- mapNamesPreDownload(names, datasource = 4)
+rlfile <- paste0 (parent, '_resolvedlist.Rd')
+if (overwrite | !file.exists (file.path (output.dir, rlfile))) {
+  resolve.list <- mapNamesPreDownload(names, datasource = 4)
+  save (resolve.list, file=file.path (output.dir, rlfile))
+} else {
+  load (file=file.path (output.dir, rlfile))
+}
 cat ('\n.... real')
 pin.res <- pin (tree=tree, names=binomials, lineages=lineages,
                 min.ages=min.age, max.ages=max.age,
