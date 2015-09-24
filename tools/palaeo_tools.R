@@ -67,15 +67,14 @@ calcEDBySlice <- function (tree, time.cuts) {
   # Return ED values for clades at different time slices
   # for time callibrated tree
   age <- max (diag (vcv.phylo (tree)))
-  interval <- age/time.cuts
-  intervals <- seq (from=interval, to=age, by=interval)
+  time.cuts <- time.cuts[time.cuts < age]
   all.node.labels <- paste0 ('n', 1:(length (tree$tip.label) + tree$Nnode))
   res <- matrix (nrow=time.cuts, ncol=length (all.node.labels))
   rownames (res) <- as.character (intervals)
   colnames (res) <- all.node.labels
-  for (i in 1:time.cuts) {
+  for (i in 1:length (time.cuts)) {
     # slice tree at interval
-    sliced <- getTimeslice (tree=tree, time.slice=intervals[i],
+    sliced <- getTimeslice (tree=tree, time.slice=time.cuts[i],
                             all.node.labels=all.node.labels)
     # get ed vals
     ed.res <- calcED (sliced)
