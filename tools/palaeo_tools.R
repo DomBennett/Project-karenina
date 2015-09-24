@@ -20,6 +20,7 @@ pin <- function (tree=tree, names=binomials, lineages=lineages,
   require (doMC)
   registerDoMC (ncpus)
   pin.res <- foreach (i=1:iterations) %dopar% {
+    cat ('\n.... [', i, ']', sep='')
     pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
                          min.ages=min.age, max.ages=max.age,
                          iterations=1, resolve.list=resolve.list)
@@ -69,8 +70,8 @@ calcEDBySlice <- function (tree, time.cuts) {
   age <- max (diag (vcv.phylo (tree)))
   time.cuts <- time.cuts[time.cuts < age]
   all.node.labels <- paste0 ('n', 1:(length (tree$tip.label) + tree$Nnode))
-  res <- matrix (nrow=time.cuts, ncol=length (all.node.labels))
-  rownames (res) <- as.character (intervals)
+  res <- matrix (nrow=length (time.cuts), ncol=length (all.node.labels))
+  rownames (res) <- as.character (time.cuts)
   colnames (res) <- all.node.labels
   for (i in 1:length (time.cuts)) {
     # slice tree at interval

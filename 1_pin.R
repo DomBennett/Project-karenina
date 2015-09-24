@@ -88,7 +88,7 @@ rand.res <- pin (tree=tree, names=binomials, lineages=lineages,
                  min.ages=min.age, max.ages=max.age,
                  iterations=iterations, resolve.list=resolve.list)
 randfile <- paste0 (parent, '_rand.tre')
-write.tree (pin.res, file=file.path (output.dir, randfile))
+write.tree (rand.res, file=file.path (output.dir, randfile))
 cat ('\nDone.')
 
 # TIMESTAMP
