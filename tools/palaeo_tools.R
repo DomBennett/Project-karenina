@@ -2,8 +2,8 @@
 # 17/07/2015
 # Tools for ED and fossils
 
-# LIBS
-source (file.path ('tools', 'pin_names.R'))
+# # LIBS
+# source (file.path ('tools', 'pin_names.R'))
 
 # PIN TOOLS -- requires parameters.Rd
 pin <- function (tree=tree, names=binomials, lineages=lineages,
@@ -20,7 +20,7 @@ pin <- function (tree=tree, names=binomials, lineages=lineages,
   require (doMC)
   registerDoMC (ncpus)
   pin.res <- foreach (i=1:iterations) %dopar% {
-    cat ('\n.... [', i, ']', sep='')
+    cat ('\n........ [', i, ']', sep='')
     pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
                          min.ages=min.age, max.ages=max.age,
                          iterations=1, resolve.list=resolve.list)
