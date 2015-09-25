@@ -2,8 +2,8 @@
 # 17/07/2015
 # Tools for ED and fossils
 
-# # LIBS
-# source (file.path ('tools', 'pin_names.R'))
+# LIBS
+source (file.path ('tools', 'pin_names.R'))
 
 # PIN TOOLS -- requires parameters.Rd
 pin <- function (tree=tree, names=binomials, lineages=lineages,
