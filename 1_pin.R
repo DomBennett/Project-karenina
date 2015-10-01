@@ -72,18 +72,18 @@ if (overwrite | !file.exists (file.path (output.dir, rlfile))) {
   load (file=file.path (output.dir, rlfile))
 }
 cat ('\n.... real')
+pinfile <- file.path (output.dir, paste0 (parent, '_pinned.tre'))
 pin.res <- pin (tree=tree, names=binomials, lineages=lineages,
                 min.ages=min.age, max.ages=max.age,
-                iterations=iterations, resolve.list=resolve.list)
-pinfile <- paste0 (parent, '_pinned.tre')
-write.tree (pin.res, file=file.path (output.dir, pinfile))
+                iterations=iterations, resolve.list=resolve.list,
+                outfile=pinfile)
 # randomise ages
-randis <- sample (1:length (lineages))
-min.age <- min.age[randis]
-max.age <- max.age[randis]
-# randomise linages
-lineages <- lineages[sample (1:length (lineages))]
-cat ('\n.... random')
+# randis <- sample (1:length (lineages))
+# min.age <- min.age[randis]
+# max.age <- max.age[randis]
+# # randomise linages
+# lineages <- lineages[sample (1:length (lineages))]
+# cat ('\n.... random')
 # rand.res <- pin (tree=tree, names=binomials, lineages=lineages,
 #                  min.ages=min.age, max.ages=max.age,
 #                  iterations=iterations, resolve.list=resolve.list)

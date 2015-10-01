@@ -8,12 +8,13 @@ source (file.path ('tools', 'pin_names.R'))
 # PIN TOOLS -- requires parameters.Rd
 pin <- function (tree=tree, names=binomials, lineages=lineages,
                  min.ages=min.age, max.ages=max.age,
-                 iterations=iterations, resolve.list=resolve.list) {
+                 iterations=iterations, resolve.list=resolve.list,
+                 outfile=NULL) {
   if (ncpus < 2) {
     pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
                          min.ages=min.age, max.ages=max.age,
                          iterations=iterations, resolve.list=resolve.list)
-    return (pin.res)
+    write.tree (pin.res, file=outfile)
   }
   # UNIX-only parrelisation
   require (foreach)
@@ -24,10 +25,8 @@ pin <- function (tree=tree, names=binomials, lineages=lineages,
     pin.res <- pinNames (tree=tree, names=binomials, lineages=lineages,
                          min.ages=min.age, max.ages=max.age,
                          iterations=1, resolve.list=resolve.list)
-    pin.res
+    write.tree (pin.res, file=outfile, append=TRUE)
   }
-  class (pin.res) <- 'multiPhylo'
-  pin.res
 }
 
 # SLICE TOOLS
