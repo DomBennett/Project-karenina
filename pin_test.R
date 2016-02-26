@@ -28,8 +28,9 @@ assembleRecords <- function (records, taxonomy, ...) {
     max.age[i] <- max (records$early_age[pull])
     min.age[i] <- min (records$late_age[pull])
     # extract PDBD taxonomy
-    lineage <- records[which (pull)[1], taxonomy, drop=TRUE]
-    lineages[[i]] <- as.vector (unlist (lineage))
+    lineage <- records[which(pull)[1], taxonomy, drop=TRUE]
+    lineage <- as.vector(unlist(lineage))
+    lineages[[i]] <- lineage[!is.na(lineage)]
     # push to parent environment
     max.age <<- max.age
     min.age <<- min.age
@@ -48,11 +49,11 @@ pin <- function (tree=tree, tids, lngs,
   .run <- function(i) {
     cat ('\n........ [', i, ']', sep='')
     # randomise order to prevent order bias
-    rndi <- sample(1:length(tids))
+    #rndi <- sample(1:length(tids))
     outfile <- file.path(outfolder, paste0('i', i, '.RData'))
     ends <- sapply(1:length(min_ages),
                    function(i) runif(min=min_ages[i], max=max_ages[i], n=1))
-    pinned <- pinTips(tree, tids=tids[rndi], lngs=lngs[rndi], ends=ends[rndi])
+    pinned <- pinTips(tree, tids=tids, lngs=lngs, ends=ends)
     save(pinned, file=outfile)
   }
   if (ncpus < 2) {
@@ -68,6 +69,61 @@ pin <- function (tree=tree, tids, lngs,
       .run(i)
     }
   }
+}
+
+pinTips <- function(tree, tids, lngs, ends) {
+  .pin <- function(i) {
+    # unpack
+    tid <- tids[i]
+    print(tid)
+    lng <- lngs[[i]]
+    end <- ends[i]
+    for(j in length(lng):1) {
+      spns <- names(txnyms)[which(txnyms %in% lng[j])]
+      spns <- spns[spns != tree@root]
+      if(length(spns) == 0) {
+        next
+      }
+      spns <- c(spns, unlist(sapply(spns, function(n) tree@nodelist[[n]][['ptid']])))
+      rngs <- getSpansAge(tree, ids=spns)
+      bool <- rngs[ ,'start'] > end
+      if(any(bool)) {
+        rngs <- rngs[bool, ]
+        rngs[rngs[ ,'end'] <= end, "end"] <- end
+        # pinning is based on branch length
+        prbs <- rngs$start - rngs$end
+        if(any(prbs < 0)) {
+          print(prbs)
+        }
+        e <- as.vector(sample(rngs$span, prob=prbs, size=1))
+        e_i <- which(rngs$span == e)
+        start <- runif(min=rngs$end[e_i], max=rngs$start[e_i], n=1)
+        if(j != length(lng)) {
+          tip_txnym <- lng[j+1]
+        } else {
+          tip_txnym <- lng[j]
+        }
+        pid <- paste0('p_', tid, sep='')
+        tree <- addTip(tree, tid=tid, sid=e, start=start, end=end,
+                       pid=pid)
+        tree@nodelist[[tid]][['txnym']] <- tip_txnym
+        tree@nodelist[[pid]][['txnym']] <- lng[j]
+        # add to txnyms list
+        txnyms[[tid]] <<- tip_txnym
+        # push out
+        tree <<- tree
+        break
+      }
+    }
+  }
+  .getTxnyms <- function(txnym, ...) {
+    txnym
+  }
+  txnyms <- mlply(tree@nodelist, .fun=.getTxnyms)
+  txnyms <- txnyms[1:length(txnyms)]
+  names(txnyms) <- names(tree@nodelist)
+  m_ply(1:length(tids), .pin)
+  tree
 }
 
 # INPUT
@@ -99,12 +155,12 @@ max.age <- records.obj[['max.age']]
 min.age <- records.obj[['min.age']]
 binomials <- records.obj[['binomials']]
 length (binomials)
-rm (records.obj)
 
 # PIN
 outfolder <- file.path(output.dir, parent)
 if (!file.exists(outfolder)) {
   dir.create(outfolder)
 }
-pin(tree, tids=binomials, lngs=lineages, min_ages=min.age,
-    max_ages=max.age, iterations=iterations, outfolder=outfolder)
+iterations <- 1
+pinned <- pin(tree, tids=binomials, lngs=lineages, min_ages=min.age,
+              max_ages=max.age, iterations=iterations, outfolder=outfolder)
