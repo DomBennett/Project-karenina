@@ -11,6 +11,7 @@
 1_pin/
 2_slice/
 3_model/
+*cache*
 
 # mac
 .DS_Store
