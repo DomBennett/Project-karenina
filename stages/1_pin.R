@@ -65,21 +65,21 @@ cat('Done. Discovered [', length (binomials), '] records.')
 
 # PIN
 cat ('\nPinning ....')
-pinfile <- file.path (output.dir, paste0 (parent, '_pinned.RData'))
+cat ('\n.... real data')
+pinfile <- file.path (output.dir, paste0 (parent, '_real.RData'))
 pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
             max_ages=max_age, outfile=pinfile)
-# randomise ages
-# randis <- sample (1:length (lineages))
-# min.age <- min.age[randis]
-# max.age <- max.age[randis]
-# # randomise linages
-# lineages <- lineages[sample (1:length (lineages))]
-# cat ('\n.... random')
-# rand.res <- pin (tree=tree, names=binomials, lineages=lineages,
-#                  min.ages=min.age, max.ages=max.age,
-#                  iterations=iterations, resolve.list=resolve.list)
-# randfile <- paste0 (parent, '_rand.tre')
-# write.tree (rand.res, file=file.path (output.dir, randfile))
+cat ('\n.... random lineages')
+pinfile <- file.path (output.dir, paste0 (parent, '_rndm_lngs.RData'))
+pinParallel(tree, tids=binomials, lngs=sample(lineages),
+            min_ages=min_age, max_ages=max_age, outfile=pinfile)
+cat ('\n.... random ages')
+randis <- sample(1:length (lineages))
+pinfile <- file.path (output.dir, paste0 (parent, '_rndm_ages.RData'))
+pinParallel(tree, tids=binomials, lngs=lineages,
+            min_ages=min_age[randis],
+            max_ages=max_age[randis],
+            outfile=pinfile)
 cat ('\nDone.')
 
 # TIMESTAMP
