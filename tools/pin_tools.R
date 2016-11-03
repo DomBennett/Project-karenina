@@ -27,12 +27,15 @@ assembleRecords <- function (records, taxonomy, ...) {
 }
 
 pinParallel <- function (tree, tids, lngs, min_ages, max_ages, outfile) {
+  if(file.exists(outfile)) {
+    file.remove(outfile)
+  }
   if (ncpus < 2) {
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
     })
-    trees <- pinTips(tree, tids, lngs, end_ages, tree_age)
-    save(trees, file=outfile)
+    tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
+    writeTree(tree, file=outfile)
   }
   # UNIX-only parrelisation
   require (foreach)
@@ -45,5 +48,9 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, outfile) {
     })
     pinTips(tree, tids, lngs, end_ages, tree_age)
   }
-  save(trees, file=outfile)
+  for(tree in trees) {
+    # not efficient to run in parallel
+    # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
+    writeTree(tree, file=outfile, append=TRUE)
+  }
 }

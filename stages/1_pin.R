@@ -18,17 +18,16 @@ if (!file.exists (output.dir)) {
 # LIBS
 library(treeman)
 library(paleobioDB)
-source(file.path ('tools', 'palaeo_tools.R'))
+source(file.path ('tools', 'pin_tools.R'))
 
 # READ TREE
-cat ('\nReasearching tree ....')
-tree <- readTree(file.path (input.dir, treefile))
-tree_age <- getTreeAge(tree)
+cat ('\nResearching tree ....')
+tree <- readTree(file.path (input.dir, treefile),
+                 wndmtrx=FALSE)
+tree_age <- getAge(tree)
 tree_tips <- tree['tips']
 txnyms <- searchTxnyms(tree, cache=TRUE)
 tree <- setTxnyms(tree, txnyms)
-tree@wtxnyms <- TRUE
-tree <- downdateTree(tree)
 cat ('\nDone.')
 
 # PALEODB
@@ -66,16 +65,16 @@ cat('Done. Discovered [', length (binomials), '] records.')
 # PIN
 cat ('\nPinning ....')
 cat ('\n.... real data')
-pinfile <- file.path (output.dir, paste0 (parent, '_real.RData'))
+pinfile <- file.path (output.dir, paste0 (parent, '_real.tre'))
 pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
             max_ages=max_age, outfile=pinfile)
 cat ('\n.... random lineages')
-pinfile <- file.path (output.dir, paste0 (parent, '_rndm_lngs.RData'))
+pinfile <- file.path (output.dir, paste0 (parent, '_rndm_lngs.tre'))
 pinParallel(tree, tids=binomials, lngs=sample(lineages),
             min_ages=min_age, max_ages=max_age, outfile=pinfile)
 cat ('\n.... random ages')
 randis <- sample(1:length (lineages))
-pinfile <- file.path (output.dir, paste0 (parent, '_rndm_ages.RData'))
+pinfile <- file.path (output.dir, paste0 (parent, '_rndm_ages.tre'))
 pinParallel(tree, tids=binomials, lngs=lineages,
             min_ages=min_age[randis],
             max_ages=max_age[randis],
