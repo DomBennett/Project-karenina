@@ -6,52 +6,60 @@
 cat (paste0 ('\nSlicing started at [', Sys.time (), ']'))
 
 # PARAMETERS
-load ('parameters.Rd')
+source('parameters.R')
 
 # DIRS
-input.dir <- '1_pin'
-output.dir <- '2_slice'
-if (!file.exists (output.dir)) {
-  dir.create (output.dir)
+input_dir <- '1_pin'
+output_dir <- '2_slice'
+if(!file.exists(output_dir)) {
+  dir.create(output_dir)
 }
 
 # LIBS
-library (MoreTreeTools)
-source (file.path ('tools', 'palaeo_tools.R'))
+require (foreach)
+require (doMC)
+registerDoMC (ncpus)
+library(ape)
+source(file.path('tools', 'slice_tools.R'))
 
 # INPUT
-pinfile <- paste0 (parent, '_pinned.tre')
-pin.trees <- read.tree (file.path (input.dir, pinfile))
-randfile <- paste0 (parent, '_rand.tre')
-rand.trees <- read.tree (file.path (input.dir, randfile))
-trees <- c (pin.trees, rand.trees)
-rand.bool <- c (rep (FALSE, length (pin.trees)),
-                rep (TRUE, length (rand.trees)))
+pinfile <- paste0(parent, '_real.tre')
+pin_trees <- read.tree(file.path(input_dir, pinfile))
+randfile <- paste0(parent, '_rndm_lngs.tre')
+rndm_lngs_trees <- read.tree(file.path(input_dir, randfile))
+randfile <- paste0(parent, '_rndm_ages.tre')
+rndm_ages_trees <- read.tree(file.path(input_dir, randfile))
+trees <- c (pin_trees, rndm_lngs_trees, rndm_ages_trees)
+tree_code <- rep(c('real', 'rl', 'ra'), each=iterations)
 
-# CALC ED BY TIMESLICE
-res <- list ()  # list of matrices
-nodedicts <- list ()
-constraint.trees <- list ()
-for (i in 1:length (trees)) {
-  # get ED by timeslice
-  part.res <- calcEDBySlice (trees[[i]], time.cuts)
-  res <- c (res, list (part.res))
-  # get nodedict for tree
-  nodedict <- getNodedict (trees[[i]])
-  nodedicts <- c (nodedicts, list (nodedict))
-  # get constraint tree
-  constraint.tree <- addTips2Nodes (trees[[i]])
-  constraint.trees <- c (constraint.trees,
-                         list (constraint.tree))
+# CALCULATIONS IN PARALLEL
+cat('Calculating ED by timeslice ....')
+ed_slices <- foreach (i=1:length(trees)) %dopar% {
+  cat ('\n........ [', i, ']', sep='')
+  calcEDBySlice(trees[[i]], time.cuts)
 }
-class (constraint.trees) <- 'multiPhylo'
+cat('Done.')
+cat('Calculating nodedicts ....')
+nodedict <- foreach (i=1:length(trees)) %dopar% {
+  cat ('\n........ [', i, ']', sep='')
+  # get nodedict for tree
+  getNodedict(trees[[i]])
+}
+cat('Done.')
+cat('Calculating constraint trees ....')
+constraint_trees <- foreach (i=1:length(trees)) %dopar% {
+  cat ('\n........ [', i, ']', sep='')
+  # get constraint tree
+  addTips2Nodes(trees[[i]])
+}
+class(constraint_trees) <- 'multiPhylo'
+cat('Done.')
 
 # OUTPUT
-save (rand.bool, file=file.path (output.dir, 'randbool.Rd'))
-save (res, file=file.path (output.dir, 'ed_slices.Rd'))
-save (nodedict, file=file.path (output.dir, 'nodedict.Rd'))
-write.tree (constraint.trees,
-            file=file.path (output.dir, 'constraint_trees.tre'))
+save(tree_code, file=file.path(output_dir, 'tree_code.RData'))
+save(ed_slices, file=file.path(output_dir, 'ed_slices.RData'))
+save(nodedict, file=file.path(output_dir, 'nodedict.RData'))
+save(constraint_trees, file=file.path(output_dir, 'constraint_trees.RData'))
 
 # TIMESTAMP
 cat (paste0 ('\nSlicing finished at [', Sys.time (), ']'))
