@@ -50,6 +50,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
     # .... but better to save progress
     save(tree, file=file.path(pinfolder, paste0(i, '.RData')))
+    NULL
   }
   cat('.... converting to Newick\n')
   tree_files <- list.files(pinfolder, pattern='.RData')
