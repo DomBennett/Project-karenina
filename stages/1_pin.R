@@ -65,20 +65,20 @@ cat('Done. Discovered [', length (binomials), '] records.')
 # PIN
 cat ('\nPinning ....')
 cat ('\n.... real data')
-pinfile <- file.path (output.dir, paste0 (parent, '_real.tre'))
+pinfolder <- file.path(output.dir, paste0 (parent, '_real'))
 pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
-            max_ages=max_age, outfile=pinfile)
+            max_ages=max_age, pinfolder=pinfolder)
 cat ('\n.... random lineages')
-pinfile <- file.path (output.dir, paste0 (parent, '_rndm_lngs.tre'))
+pinfolder <- file.path(output.dir, paste0 (parent, '_rndm_lngs'))
 pinParallel(tree, tids=binomials, lngs=sample(lineages),
-            min_ages=min_age, max_ages=max_age, outfile=pinfile)
+            min_ages=min_age, max_ages=max_age, pinfolder=pinfolder)
 cat ('\n.... random ages')
 randis <- sample(1:length (lineages))
-pinfile <- file.path (output.dir, paste0 (parent, '_rndm_ages.tre'))
+pinfolder <- file.path(output.dir, paste0 (parent, '_rndm_ages'))
 pinParallel(tree, tids=binomials, lngs=lineages,
             min_ages=min_age[randis],
             max_ages=max_age[randis],
-            outfile=pinfile)
+            pinfolder=pinfolder)
 cat ('\nDone.')
 
 # TIMESTAMP

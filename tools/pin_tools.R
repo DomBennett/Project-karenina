@@ -26,16 +26,16 @@ assembleRecords <- function (records, taxonomy, ...) {
         'binomials'=binomials)
 }
 
-pinParallel <- function (tree, tids, lngs, min_ages, max_ages, outfile) {
-  if(file.exists(outfile)) {
-    file.remove(outfile)
+pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
+  if(!file.exists(pinfolder)) {
+    dir.create(pinfolder)
   }
-  if (ncpus < 2) {
+  if(ncpus < 2) {
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
     })
     tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
-    writeTree(tree, file=outfile)
+    save(tree, file=file.path(pinfolder, '1.RData'))
   }
   # UNIX-only parrelisation
   require (foreach)
@@ -46,11 +46,15 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, outfile) {
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
     })
-    pinTips(tree, tids, lngs, end_ages, tree_age)
-  }
-  for(tree in trees) {
-    # not efficient to run in parallel
+    # not necessarily efficient to run in parallel
     # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
-    writeTree(tree, file=outfile, append=TRUE)
+    # .... but better to save progress
+    save(tree, file=file.path(pinfolder, paste0(i, '.RData')))
+  }
+  cat('.... converting to Newick\n')
+  tree_files <- list.files(pinfolder, pattern='.RData')
+  for(tree_file in tree_files) {
+    load(file.path(pinfolder, tree_file))
+    writeTree(tree, file=paste0(pinfolder, '.tre'), append=TRUE)
   }
 }
