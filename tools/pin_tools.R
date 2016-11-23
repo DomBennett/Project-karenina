@@ -41,7 +41,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
   require (foreach)
   require (doMC)
   registerDoMC (ncpus)
-  trees <- foreach (i=1:iterations) %dopar% {
+  trees <- foreach (iterations) %dopar% {
     cat ('\n........ [', i, ']', sep='')
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
@@ -49,6 +49,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     # not necessarily efficient to run in parallel
     # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
     # .... but better to save progress
+    tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
     save(tree, file=file.path(pinfolder, paste0(i, '.RData')))
     NULL
   }
