@@ -41,7 +41,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
   require (foreach)
   require (doMC)
   registerDoMC (ncpus)
-  trees <- foreach (iterations) %dopar% {
+  trees <- foreach (i=iterations) %dopar% {
     cat ('\n........ [', i, ']', sep='')
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
