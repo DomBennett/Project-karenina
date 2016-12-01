@@ -3,6 +3,8 @@ assembleRecords <- function (records, taxonomy, ...) {
   # parse names, linages and ages for pinning
   lineages <- list ()
   records$binomial <- paste0 (records$genus_name, ' ', records$species_name)
+  records$binomial <- gsub('\\s', '_', records$binomial)
+  records$binomial <- gsub('[^a-zA-Z0-9_]', '', records$binomial)
   records <- records[!records$binomial %in% tree_tips, ]
   binomials <- unique (records$binomial)
   max.age <- min.age <- rep (NA, length (binomials))
@@ -14,7 +16,10 @@ assembleRecords <- function (records, taxonomy, ...) {
     min.age[i] <- min(records$late_age[pull])
     # extract PDBD taxonomy
     lineage <- records[which (pull)[1], taxonomy, drop=TRUE]
-    lineages[[i]] <- as.vector (unlist (lineage))
+    lineage <- gsub('\\s', '_', as.vector (unlist(lineage)))
+    lineage <- gsub('[^a-zA-Z0-9_]', '', lineage)
+    lineage <- lineage[!duplicated(lineage)]
+    lineages[[i]] <- lineage[!is.na(lineage)]
     # push to parent environment
     max.age <<- max.age
     min.age <<- min.age
