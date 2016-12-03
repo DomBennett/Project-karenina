@@ -59,6 +59,9 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     NULL
   }
   cat('.... converting to Newick\n')
+  if(file.exists(paste0(pinfolder, '.tre'))) {
+    file.remove(paste0(pinfolder, '.tre'))
+  }
   tree_files <- list.files(pinfolder, pattern='.RData')
   for(tree_file in tree_files) {
     load(file.path(pinfolder, tree_file))
