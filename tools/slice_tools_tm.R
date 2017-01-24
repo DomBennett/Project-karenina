@@ -1,5 +1,5 @@
 
-timeslice <- function(tree, tm_ct, tree_age) {
+timeslice <- function(tree, tm_ct, nd_spns) {
   # Internals
   rmPtnds <- function(nd) {
     ptids <- nd[['ptid']]
@@ -13,8 +13,6 @@ timeslice <- function(tree, tm_ct, tree_age) {
     ndlst[[id]]
   }
   # find all spans after the time split or that pass through it
-  nd_spns <- getSpnsAge(tree, tree@all, tree_age)
-  nd_spns[['spn']] <- as.character(nd_spns[['spn']])
   to_rmv <- nd_spns[['spn']][nd_spns[['start']] <= tm_ct]
   nd_spns <- nd_spns[!nd_spns[['spn']] %in% to_rmv, ]
   bool <- !tree@all %in% to_rmv
@@ -41,7 +39,8 @@ calcEDBySlice <- function (tree, time_cuts) {
   # Return ED values for clades at different time slices
   # Internals
   getNdFP <- function(id) {
-    mean(fp_vals[kids[[id]]])
+    kids <- getNdKids(slcd, id)
+    mean(fp_vals[kids])
   }
   # for time callibrated tree
   tree_age <- getAge(tree)
@@ -52,16 +51,20 @@ calcEDBySlice <- function (tree, time_cuts) {
                 ncol=tree['nall'])
   rownames(res) <- time_cuts
   colnames(res) <- tree['all']
+  nd_spns <- getSpnsAge(tree, tree@all, tree_age=tree_age)
+  nd_spns[['spn']] <- as.character(nd_spns[['spn']])
   for(i in 1:length(time_cuts)) {
     # drop tips extinct by time cut
-    tp_ages <- getNdsAge(tree, tree['tips'], tree_age=tree_age)
-    bool <- tp_ages > time_cuts[i]
+    tp_ages <- nd_spns[nd_spns[['spn']] %in% tree@tips, c('spn', 'end')]
+    bool <- tp_ages[['end']] > time_cuts[i]
     if(any(bool)) {
-      tree <- rmTips(tree, tids=names(bool)[bool])
+      to_drp <- tp_ages[['spn']][bool]
+      tree <- rmTips(tree, tids=to_drp)
+      nd_spns <- nd_spns[nd_spns[['spn']] %in% tree@all, ]
     }
     # slice tree at interval
     slcd <- timeslice(tree=tree, tm_ct=time_cuts[i],
-                      tree_age=tree_age)
+                      nd_spns=nd_spns)
     # get ed vals (tips and mean tips for nodes)
     fp_vals <- calcFrPrp(slcd, slcd['tips'])
     kids <- getNdsKids(slcd, slcd['nds'])
