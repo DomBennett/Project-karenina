@@ -1,0 +1,73 @@
+
+timeslice <- function(tree, tm_ct, tree_age) {
+  # Internals
+  rmPtnds <- function(nd) {
+    ptids <- nd[['ptid']]
+    nd[['ptid']] <- ptids[!ptids %in% to_rmv]
+    nd
+  }
+  updateSpns <- function(i) {
+    id <- nd_spns[['spn']][i]
+    end <- nd_spns[['end']][i]
+    ndlst[[id]][['spn']] <- ndlst[[id]][['spn']] - (tm_ct - end)
+    ndlst[[id]]
+  }
+  # find all spans after the time split or that pass through it
+  nd_spns <- getSpnsAge(tree, tree@all, tree_age)
+  nd_spns[['spn']] <- as.character(nd_spns[['spn']])
+  to_rmv <- nd_spns[['spn']][nd_spns[['start']] <= tm_ct]
+  nd_spns <- nd_spns[!nd_spns[['spn']] %in% to_rmv, ]
+  bool <- !tree@all %in% to_rmv
+  # remove them
+  ndlst <- tree@ndlst[bool]
+  # remove all references to remvoed nodes
+  ndlst <- lapply(ndlst, rmPtnds)
+  # recalculate lengths of spans that pass through
+  spns <- which(nd_spns[['end']] < tm_ct)
+  ndlst[spns] <- lapply(spns, updateSpns)
+  # update tree
+  newtree <- tree
+  newtree@ndlst <- ndlst
+  newtree <- pstMnp(newtree)
+  newtree <- updateSlts(newtree)
+  if(!is.null(tree@ndmtrx)) {
+    tree@ndmtrx <- bigmemory::as.big.matrix(tree@ndmtrx[bool, bool])
+  }
+  newtree
+}
+
+
+calcEDBySlice <- function (tree, time_cuts) {
+  # Return ED values for clades at different time slices
+  # Internals
+  getNdFP <- function(id) {
+    mean(fp_vals[kids[[id]]])
+  }
+  # for time callibrated tree
+  tree_age <- getAge(tree)
+  time_cuts <- time_cuts[time_cuts < tree_age]
+  time_cuts <- sort(time_cuts, decreasing=TRUE)
+  # gen res mtrx
+  res <- matrix(NA, nrow=length(time_cuts),
+                ncol=tree['nall'])
+  rownames(res) <- time_cuts
+  colnames(res) <- tree['all']
+  for(i in 1:length(time_cuts)) {
+    # drop tips extinct by time cut
+    tp_ages <- getNdsAge(tree, tree['tips'], tree_age=tree_age)
+    bool <- tp_ages > time_cuts[i]
+    if(any(bool)) {
+      tree <- rmTips(tree, tids=names(bool)[bool])
+    }
+    # slice tree at interval
+    slcd <- timeslice(tree=tree, tm_ct=time_cuts[i],
+                      tree_age=tree_age)
+    # get ed vals (tips and mean tips for nodes)
+    fp_vals <- calcFrPrp(slcd, slcd['tips'])
+    kids <- getNdsKids(slcd, slcd['nds'])
+    fp_vals <- c(fp_vals, sapply(slcd['nds'], getNdFP))
+    # add to res
+    res[i, names(fp_vals)] <- fp_vals
+  }
+  return(res)
+}
