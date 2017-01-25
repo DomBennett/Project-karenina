@@ -36,16 +36,21 @@ rm(pinfiles, rndagefiles, rndlngfiles)
 
 # CALCULATIONS IN PARALLEL
 cat('Calculating ED by timeslice ....')
-ed_slices <- foreach (i=1:length(tree_files)) %dopar% {
+slice_dir <- file.path(output_dir, 'slices')
+if(!file.exists(slice_dir)) {
+  dir.create(slice_dir)
+}
+foreach (i=1:length(tree_files)) %dopar% {
   cat ('\n........ [', i, ']', sep='')
   load(tree_files[[i]])
-  calcEDBySlice(tree, time_cuts)
+  ed_slice <- calcEDBySlice(tree, time_cuts)
+  save(ed_slice, file=file.path(slice_dir, paste0(i, '.RData')))
+  rm(ed_slice)
 }
 cat('Done.')
 
 # OUTPUT
 save(tree_code, file=file.path(output_dir, 'tree_code.RData'))
-save(ed_slices, file=file.path(output_dir, 'ed_slices.RData'))
 
 # TIMESTAMP
 cat (paste0 ('\nSlicing finished at [', Sys.time (), ']'))
