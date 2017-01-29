@@ -23,17 +23,16 @@ load(file=file.path(input_dir, 'tree_code.RData'))
 
 # MAKE MODEL DATA
 cat('Merging slices in model data ....\n')
-ed_files <- list.files(input_dir)
-ed_files <- ed_files[ed_files != 'tree_code.RData']
+# real
+cat('\n.... real')
+ed_files <- paste0(which(tree_code == 'p'), '.RData')
 ed_files <- file.path(input_dir, ed_files)
-mdl_data <- data.frame(t0=NA, t1=NA, tmsplt=NA, id=NA, cnt=NA)
-for(i in 1:length(ed_files)) {
-  cat('....[', i, ']\n', sep='')
-  load(ed_files[[i]])
-  tmp <- sapply(1:(nrow(ed_slice) - 1), extrct)
-  rm(ed_slice)
-}
-mdl_data <- mdl_data[-1, ]
+mdl_data <- makeMdlData(ed_files)
+# random
+cat('\n.... random')
+ed_files <- paste0(which(tree_code == 'ra'), '.RData')
+ed_files <- file.path(input_dir, ed_files)
+rnd_data <- makeMdlData(ed_files)
 cat('Done.\n')
 
 # CHECK
@@ -60,10 +59,16 @@ tmsplts <- c("1.29985-0", "3.9605-1.29985", "14.1815-3.9605",
              "83.25-61", "122.75-83.25", "154.25-122.75")
 epochs <- c('Pe-Re', 'Pi-Pe', 'Mi-Pi', 'Ol-Mi', 'Eo-Ol',
             'Pa-Eo', 'CU-Pa', 'CL-CU', 'JU-CL')
+# real
 mtchng <- match(mdl_data$tmsplt, tmsplts)
 mdl_data$epoch <- epochs[mtchng]
 mdl_data$epoch <- factor(mdl_data$epoch,
                           levels=epochs)
+# rand
+mtchng <- match(rnd_data$tmsplt, tmsplts)
+rnd_data$epoch <- epochs[mtchng]
+rnd_data$epoch <- factor(rnd_data$epoch,
+                         levels=epochs)
 # add tree info
 library(treeman)
 tree <- readTree(file.path('0_data', treefile),
@@ -76,7 +81,8 @@ rm(tree)
 cat('Done.\n')
 
 # SAVE
-save(mdl_data, file=file.path(output_dir, paste0(parent, '.RData')))
+save(mdl_data, rnd_data,
+     file=file.path(output_dir, paste0(parent, '.RData')))
 
 # TIMESTAMP
 cat (paste0 ('\nWrangling finished at [', Sys.time (), ']'))
