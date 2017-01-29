@@ -66,7 +66,7 @@ cat('Done. Discovered [', length (binomials), '] records.')
 
 # PIN
 cat ('\nPinning ....')
-cat ('\n.... real data')
+cat ('\n.... real')
 pinfolder <- file.path(output.dir, paste0 (parent, '_real'))
 pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
             max_ages=max_age, pinfolder=pinfolder)
