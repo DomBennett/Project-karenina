@@ -38,7 +38,7 @@ slice <- function(tree, tm_ct) {
 }
 
 # PARAMETERS
-parent <- 'hominoidea'
+parent <- 'Hominoidea'
 
 # DIRS
 input_dir <- '1_pin'
@@ -49,7 +49,7 @@ if(!file.exists(output_dir)) {
 
 # LIBS
 library(treeman)
-source(file.path('tools', 'slice_tools_tm.R'))
+source(file.path('tools', 'slice_tools.R'))
 
 # LIST FILES
 pinfile <- list.files(file.path(input_dir, paste0(parent, '_real')))[1]
@@ -65,7 +65,7 @@ slcd_1 <- slice(tree, 14.1815)
 slcd_2 <- slice(tree, 1.29985)
 
 # PLOT
-pdf(file='reconstructions.pdf', w=7, h=15)
+pdf(file=file.path('other', 'reconstructions.pdf'), w=7, h=15)
 par(mfrow=c(3,1))
 plot(as(tree, 'phylo'), main='Eocene - Present', cex=0.5)
 ape::axisPhylo()

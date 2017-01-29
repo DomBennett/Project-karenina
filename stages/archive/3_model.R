@@ -6,7 +6,6 @@
 source('parameters.R')
 
 # LIBS
-library(ape)
 library(nlme)
 
 # DIRS
@@ -18,9 +17,54 @@ if (!file.exists(output_dir)) {
 
 # INPUT
 load(file=file.path(input_dir, 'ed_slices.RData'))
-load(file=file.path(input_dir, 'nodedict.RData'))
 load(file=file.path(input_dir, 'tree_code.RData'))
-load(file=file.path(input_dir, 'constraint_trees.RData'))
+
+
+# MAKE MODEL DATA
+mdl_data <- data.frame(ed=NA, id=NA, int=NA, tm=NA)
+for(i in which(tree_code == 'p')) {
+  ed_slice <- ed_slices[[i]]
+  
+  for(j in 1:nrow(ed_slice)) {
+    tm_slice <- ed_slice[j, ]
+    tm_slice <- tm_slice[!is.na(tm_slice)]
+    tmp <- data.frame(ed=as.numeric(tm_slice),
+                      id=names(tm_slice), int=i,
+                      tm=rownames(ed_slice)[j])
+    mdl_data <- rbind(mdl_data, tmp)
+  }
+}
+mdl_data <- mdl_data[-1, ]
+
+
+# PLOT
+
+glm()
+
+pull <- mdl_data$tm %in% c('0', '1.29985')
+t0t1 <- mdl_data[pull, ]
+plot(x=log(ed_slice[4,]), y=log(ed_slice[5,]))
+
+
+mdl_data <- data.frame(t0=ed_slice[4, ],
+                       t1=ed_slice[5, ])
+mdl_data <- na.omit(mdl_data)
+m <- lm(t1~t0, data=mdl_data)
+summary(m)
+plot(t1~t0, data=mdl_data)
+abline(m)
+
+mdl_data$tdf <- mdl_data$t1 - mdl_data$t0
+
+mdl_data_log <- log(mdl_data)
+mdl_data_log <- na.omit(mdl_data_log)
+
+plot(mdl_data_log$t0, mdl_data_log$tdf)
+
+pull <- mdl_data_log$t0 > mean(mdl_data_log$t0)
+t.test(mdl_data_log$tdf[pull], mdl_data_log$tdf[pull])
+
+
 
 # PROCESS
 # loop through results from each tree
@@ -38,6 +82,11 @@ for(i in 1:length(ed_slices)) {
     model_data[j, 'mean_ed'] <- mean(ed_slice[ ,j], na.rm=TRUE)
     model_data[j, 'mean_diff'] <- mean(t1-t0, na.rm=TRUE)
   }
+  
+  
+  ed_slice$
+  
+  
   # clean data
   pull <- rowSums(model_data)
   pull <- !is.infinite(pull) & !is.na(pull)

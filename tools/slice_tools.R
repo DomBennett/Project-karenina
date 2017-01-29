@@ -1,106 +1,98 @@
-addTips2Nodes <- function (tree) {
-  # Return a tree with new tips at every node
-  # All tips labelled N1-NNode
-  nodedict <- getNodedict (tree)
-  for (i in 1:length (nodedict)) {
-    # ignore tips with only one descendant
-    if (length (nodedict[[i]]) < 2) {
-      next
+
+calcFrPrp <- function(tree, tids, progress="none") {
+  .calc <- function(i) {
+    id <- tree@all[i]
+    spn <- getNdSlt(tree, "spn", id)
+    kids <- getNdKids(tree, id)
+    if(length(kids) == 0) {
+      spn_shres[i, id] <<- spn
+    } else {
+      spn_shre <- spn/length(kids)
+      spn_shres[i, kids] <<- spn_shre
     }
-    children <- nodedict[[i]]
-    node <- MoreTreeTools::getParent (tree, tip=children)
-    edge <- which (tree$edge[ ,1] == node)[1]
-    node.age <- MoreTreeTools::getAge (tree, node=node)[,2]
-    tree <- MoreTreeTools::addTip(tree=tree, edge=edge,
-                                  node.age=node.age, tip.age=node.age,
-                                  tip.name=names (nodedict)[i])
   }
-  tree$tip.label <- paste0 ('n', 1:MoreTreeTools::getSize (tree))
-  tree
+  spn_shres <- bigmemory::big.matrix(init=0, ncol=tree@ntips,
+                                     nrow=tree@nall,
+                                     shared=FALSE)
+  options(bigmemory.allow.dimnames=TRUE)
+  colnames(spn_shres) <- tree@tips
+  plyr::m_ply(.data=data.frame(i=1:tree@nall), .fun = .calc,
+              .progress=progress)
+  colSums(spn_shres[, tids])
 }
 
-getNodedict <- function (tree) {
-  # Return a list of each node and its children
-  nodedict <- list ()
-  nnode <- MoreTreeTools::getSize(tree) + tree$Nnode
-  for (i in 1:nnode) {
-    node.name <- paste0 ('n', i)
-    nodedict[node.name] <- list (MoreTreeTools::getChildren (tree, i))
+timeslice <- function(tree, tm_ct, nd_spns) {
+  # Internals
+  rmPtnds <- function(nd) {
+    ptids <- nd[['ptid']]
+    nd[['ptid']] <- ptids[!ptids %in% to_rmv]
+    nd
   }
-  nodedict
+  updateSpns <- function(i) {
+    id <- nd_spns[['spn']][i]
+    end <- nd_spns[['end']][i]
+    ndlst[[id]][['spn']] <- ndlst[[id]][['spn']] - (tm_ct - end)
+    ndlst[[id]]
+  }
+  # find all spans after the time split or that pass through it
+  to_rmv <- nd_spns[['spn']][nd_spns[['start']] <= tm_ct]
+  nd_spns <- nd_spns[!nd_spns[['spn']] %in% to_rmv, ]
+  bool <- !tree@all %in% to_rmv
+  # remove them
+  ndlst <- tree@ndlst[bool]
+  # remove all references to remvoed nodes
+  ndlst <- lapply(ndlst, rmPtnds)
+  # recalculate lengths of spans that pass through
+  spns <- which(nd_spns[['end']] < tm_ct)
+  ndlst[spns] <- lapply(spns, updateSpns)
+  # update tree
+  newtree <- tree
+  newtree@ndlst <- ndlst
+  newtree <- pstMnp(newtree)
+  newtree <- updateSlts(newtree)
+  if(!is.null(tree@ndmtrx)) {
+    tree@ndmtrx <- bigmemory::as.big.matrix(tree@ndmtrx[bool, bool])
+  }
+  newtree
 }
 
-calcEDBySlice <- function (tree, time.cuts) {
+
+calcEDBySlice <- function (tree, time_cuts) {
   # Return ED values for clades at different time slices
+  # Internals
+  getNdFP <- function(id) {
+    kids <- getNdKids(slcd, id)
+    mean(fp_vals[kids])
+  }
   # for time callibrated tree
-  age <- max (diag (vcv.phylo (tree)))
-  time.cuts <- time.cuts[time.cuts < age]
-  all.node.labels <- paste0 ('n', 1:(length (tree$tip.label) + tree$Nnode))
-  res <- matrix (nrow=length (time.cuts), ncol=length (all.node.labels))
-  rownames (res) <- as.character (time.cuts)
-  colnames (res) <- all.node.labels
-  for (i in 1:length (time.cuts)) {
+  tree_age <- getAge(tree)
+  time_cuts <- time_cuts[time_cuts < tree_age]
+  time_cuts <- sort(time_cuts, decreasing=TRUE)
+  # gen res mtrx
+  res <- matrix(NA, nrow=length(time_cuts),
+                ncol=tree['nall'])
+  rownames(res) <- time_cuts
+  colnames(res) <- tree['all']
+  nd_spns <- getSpnsAge(tree, tree@all, tree_age=tree_age)
+  nd_spns[['spn']] <- as.character(nd_spns[['spn']])
+  for(i in 1:length(time_cuts)) {
+    # drop tips extinct by time cut
+    tp_ages <- nd_spns[nd_spns[['spn']] %in% tree@tips, c('spn', 'end')]
+    bool <- tp_ages[['end']] > time_cuts[i]
+    if(any(bool)) {
+      to_drp <- tp_ages[['spn']][bool]
+      tree <- rmTips(tree, tids=to_drp)
+      nd_spns <- nd_spns[nd_spns[['spn']] %in% tree@all, ]
+    }
     # slice tree at interval
-    sliced <- getTimeslice (tree=tree, time.slice=time.cuts[i],
-                            all.node.labels=all.node.labels)
-    # get ed vals
-    ed.res <- MoreTreeTools::calcED(sliced)
-    # normalise by PD
-    ed.res$ED <- ed.res$ED/sum (sliced$edge.length)
+    slcd <- timeslice(tree=tree, tm_ct=time_cuts[i],
+                      nd_spns=nd_spns)
+    # get ed vals (tips and mean tips for nodes)
+    fp_vals <- calcFrPrp(slcd, slcd['tips'])
+    kids <- getNdsKids(slcd, slcd['nds'])
+    fp_vals <- c(fp_vals, sapply(slcd['nds'], getNdFP))
     # add to res
-    indexes <- match (rownames(ed.res), all.node.labels)
-    res[i,indexes] <- ed.res[,1]
+    res[i, names(fp_vals)] <- fp_vals
   }
-  return (res)
-}
-
-
-getTimeslice <- function (tree, time.slice,
-                          all.node.ages=MoreTreeTools::getAge(tree)$age,
-                          all.node.labels=paste0 ('c', 1:(length (tree$tip.label) +
-                                                            tree$Nnode))) {
-  # identify all nodes and edges that need to be kept
-  # all edges that have 1 node on older than time.slice
-  keep.nodes <- which (all.node.ages >= time.slice)
-  keep.edges <- which (tree$edge[ ,1] %in% keep.nodes)
-  # remove any tip nodes that don't pass through timeslice
-  tip.edges <- keep.edges [tree$edge[keep.edges, 2] <= length (tree$tip.label)]
-  tip.node.ages <- all.node.ages[tree$edge[tip.edges, 2]]
-  drop.tip.edges <- tip.edges[tip.node.ages >= time.slice]
-  keep.edges <- keep.edges[!keep.edges %in% drop.tip.edges]
-  # create an edge matrix
-  edge.matrix <- tree$edge[keep.edges, ]
-  edge.lengths <- tree$edge.length[keep.edges]
-  tips <- edge.matrix[!edge.matrix[ ,2] %in% edge.matrix[ ,1],2]
-  tip.labels <- all.node.labels[tips]
-  n.node <- as.integer (length (unique (edge.matrix[ ,1])))
-  # relabel all nodes
-  new.edge.matrix <- edge.matrix
-  new.edge.matrix[edge.matrix[ ,2] %in% tips,2] <- 1:length (tips)
-  new.edge.matrix[!new.edge.matrix[ ,1] %in% new.edge.matrix[ ,2],1] <- length (tips) + 1
-  old.nodes <- unique (new.edge.matrix[new.edge.matrix[ ,1] > length (tips) + 1,1])
-  new.nodes <- (length (tips) + 2):(length (old.nodes) + (length (tips) + 1))
-  for (i in 1:length (old.nodes)) {
-    new.edge.matrix[new.edge.matrix[ ,1] == old.nodes[i],1] <- new.nodes[i]
-    new.edge.matrix[new.edge.matrix[ ,2] == old.nodes[i],2] <- new.nodes[i]
-  }
-  storage.mode (new.edge.matrix) <- "integer"
-  # create new tree object
-  new.tree <- list (edge = new.edge.matrix, tip.label = tip.labels,
-                    edge.length = edge.lengths, Nnode = n.node)
-  class (new.tree) <- 'phylo'
-  # identify corresponding nodes
-  old.nodes <- unique (c (edge.matrix[ ,1], edge.matrix[ ,2]))
-  new.nodes <- unique (c (new.edge.matrix[ ,1], new.edge.matrix[ ,2]))
-  all.node.ages <- all.node.ages[old.nodes]
-  new.all.node.ages <- all.node.ages[order (new.nodes)]
-  # identify all tip nodes and re-lengthen
-  for (i in 1:length (new.tree$tip.label)) {
-    diff <- time.slice - new.all.node.ages[i]
-    edge <- which (new.tree$edge[ ,2] == i)
-    edge.length <- new.tree$edge.length[edge]
-    new.edge.length <- edge.length - diff
-    new.tree$edge.length[edge] <- new.edge.length
-  }
-  collapse.singles (new.tree)
+  return(res)
 }

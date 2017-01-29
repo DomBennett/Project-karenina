@@ -26,9 +26,11 @@ tree <- readTree(file.path (input.dir, treefile),
                  wndmtrx=FALSE)
 tree_age <- getAge(tree)
 tree_tips <- tree['tips']
-txnyms <- searchTxnyms(tree, cache=TRUE)
+txnyms <- searchTxnyms(tree, cache=TRUE, parent=parent)
+wtxnyms <- sum(!is.na(txnyms))
 tree <- setTxnyms(tree, txnyms)
-cat ('\nDone.')
+cat ('\nDone. [', wtxnyms, '/', tree['nall'],
+     '] nodes with taxonyms.', sep='')
 
 # PALEODB
 cat ('\nRetrieving records ....')
@@ -48,7 +50,7 @@ if (overwrite | !file.exists (file.path (output.dir, fossilfile))) {
   records <- read.csv (file=file.path (output.dir, fossilfile),
                        stringsAsFactors=FALSE)
 }
-cat ('\nDone.')
+cat('\nDone.')
 
 # EXTRACT NAMES + LINEAGES
 cat ('\nAssembling records for pinning ....')
@@ -68,17 +70,13 @@ cat ('\n.... real data')
 pinfolder <- file.path(output.dir, paste0 (parent, '_real'))
 pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
             max_ages=max_age, pinfolder=pinfolder)
-cat ('\n.... random lineages')
-pinfolder <- file.path(output.dir, paste0 (parent, '_rndm_lngs'))
-pinParallel(tree, tids=binomials, lngs=sample(lineages),
-            min_ages=min_age, max_ages=max_age, pinfolder=pinfolder)
-cat ('\n.... random ages')
+cat ('\n.... random')
 randis <- sample(1:length (lineages))
-pinfolder <- file.path(output.dir, paste0 (parent, '_rndm_ages'))
-pinParallel(tree, tids=binomials, lngs=lineages,
-            min_ages=min_age[randis],
-            max_ages=max_age[randis],
+pinfolder <- file.path(output.dir, paste0 (parent, '_rndm'))
+pinParallel(tree, tids=binomials, lngs=sample(lineages),
+            min_ages=min_age[randis], max_ages=max_age[randis],
             pinfolder=pinfolder)
+cat ('\n.... random ages')
 cat ('\nDone.')
 
 # TIMESTAMP

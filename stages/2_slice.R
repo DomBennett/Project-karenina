@@ -18,48 +18,36 @@ if(!file.exists(output_dir)) {
 # LIBS
 require (foreach)
 require (doMC)
-registerDoMC (ncpus)
-library(ape)
+registerDoMC(ncpus)
+library(treeman)
 source(file.path('tools', 'slice_tools.R'))
 
-# INPUT
-pinfile <- paste0(parent, '_real.tre')
-pin_trees <- read.tree(file.path(input_dir, pinfile))
-randfile <- paste0(parent, '_rndm_lngs.tre')
-rndm_lngs_trees <- read.tree(file.path(input_dir, randfile))
-randfile <- paste0(parent, '_rndm_ages.tre')
-rndm_ages_trees <- read.tree(file.path(input_dir, randfile))
-trees <- c (pin_trees, rndm_lngs_trees, rndm_ages_trees)
-tree_code <- rep(c('real', 'rl', 'ra'), each=iterations)
+# LIST FILES
+pinfiles <- list.files(file.path(input_dir, paste0(parent, '_real')))
+rndmfiles <- list.files(file.path(input_dir, paste0(parent, '_rndm')))
+tree_files <- c(file.path(input_dir, paste0(parent, '_real'), pinfiles),
+                file.path(input_dir, paste0(parent, '_rndm'), rndmfiles))
+tree_code <- c(rep('pin', each=length(pinfiles)),
+               rep('rnd', each=length(rndmfiles)))
+rm(pinfiles, rndmfiles)
 
 # CALCULATIONS IN PARALLEL
 cat('Calculating ED by timeslice ....')
-ed_slices <- foreach (i=1:length(trees)) %dopar% {
-  cat ('\n........ [', i, ']', sep='')
-  calcEDBySlice(trees[[i]], time.cuts)
+slice_dir <- file.path(output_dir, parent)
+if(!file.exists(slice_dir)) {
+  dir.create(slice_dir)
 }
-cat('Done.')
-cat('Calculating nodedicts ....')
-nodedict <- foreach (i=1:length(trees)) %dopar% {
+foreach (i=1:length(tree_files)) %dopar% {
   cat ('\n........ [', i, ']', sep='')
-  # get nodedict for tree
-  getNodedict(trees[[i]])
+  load(tree_files[[i]])
+  ed_slice <- calcEDBySlice(tree, time_cuts)
+  save(ed_slice, file=file.path(slice_dir, paste0(i, '.RData')))
+  rm(ed_slice)
 }
-cat('Done.')
-cat('Calculating constraint trees ....')
-constraint_trees <- foreach (i=1:length(trees)) %dopar% {
-  cat ('\n........ [', i, ']', sep='')
-  # get constraint tree
-  addTips2Nodes(trees[[i]])
-}
-class(constraint_trees) <- 'multiPhylo'
 cat('Done.')
 
 # OUTPUT
-save(tree_code, file=file.path(output_dir, 'tree_code.RData'))
-save(ed_slices, file=file.path(output_dir, 'ed_slices.RData'))
-save(nodedict, file=file.path(output_dir, 'nodedict.RData'))
-save(constraint_trees, file=file.path(output_dir, 'constraint_trees.RData'))
+save(tree_code, file=file.path(slice_dir, 'tree_code.RData'))
 
 # TIMESTAMP
 cat (paste0 ('\nSlicing finished at [', Sys.time (), ']'))
