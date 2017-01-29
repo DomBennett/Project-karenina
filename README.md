@@ -1,45 +1,73 @@
-# How do living fossils arise?
+# How Do Evolutionary Distinct Species Arise?
 
-## Introduction
+Are evolutionarily distinct species distinct for much the same reasons, or
+are each evolutionarily distinct species distinct in their own unique way?
+We answer this by modelling the evolutioanry distinctness of clades between
+two time points.
 
-Are all living fossils, living fossils for much the same reason, or is each
-living fossil a living fossil for different reasons? Looking at the tree of
-life today it is difficult to know how at an organism described as a living
-fossil arose: is it the sole survivor of a once large radiation (an
-evolutionary relict) or has it always been a living fossil -- a species that
-evolves at a slower rate than other species. In Tolstoy's words, are living
-fossils happy or unhappy?
+## Details
 
-To answer this question, we track the status of a living fossil through time
-using a combination of molecular phylogenetics and fossil records. For
-large species-level phylogenies we pin fossil records to the tree using a
-stochastic process in order to recreate the phylogenetic tree at different time
-points. We then retrace the living fossil status -- using evolutionary
-distinctness (ED) as a proxy -- of species today in order to determine their
-different histories.
+**Study group**: mammals
 
-## Dependencies
+**Data**: phylogeny and fossil
 
-* R package: [MoreTreeTools](https://github.com/DomBennett/MoreTreeTools)
+**OS**: UNIX
 
-## Methods
+## Reproduce
 
-### Stochastic fossil pinning (SFP)
+Download repository and initial data files (`0_data`). Once directory structure is
+setup, pipeline can be re-run from terminal:
 
-### Testing SFP
+```{bash}
+Rscript run.R &> log &
+```
+
+## Process
+
+* Download fossil records
+* Add fossils stochastically to time-calibrated molecular phylogeny with a taxonomy constraint
+* Calculate evolutionary distinctness at different different epochs for all clades
+* Model change in evolutionary distinctness of clades between epochs
+
+## Stages
+
+* 1_pin: add fossils to molecular phylogeny
+* 2_slice: calculate evolutionary distinctness at different epochs
+* 3_wrngl: wrangle and merge data for modelling
+* 4_model: model results
+
+## Dir Structure
+
+```
+0_data/
+   mammalia.tre
+stages/
+   1_pin.R
+   2_slice.R
+   3_wrngl.R
+   4_model.R
+tools/
+   pin_tools.R
+   slice_tools.R
+   wrngl_tools.R
+```
+
+Results from each stage will be saved in folders named after each stage.
 
 
+## Key Packages
 
-### Molecular trees
+* [treeman](https://github.com/DomBennett/treeman)
+* [paleobioDB](https://github.com/ropensci/paleobioDB)
 
-We use large species-level phylogenies for different taxonomic groups:
+## Data Sources
 
-* Bininda-Edmonds et al. (2007)
-* Jetz et al. (2012)
+* [Bininda-Edmonds et al. (2007)](http://www.nature.com/nature/journal/v446/n7135/abs/nature05634.html)
+* [The Paleobiology Database (2016)](https://paleobiodb.org/#/)
 
 ## Reference
 
-Not yet published.
+*In progress....*
 
 ## Author
 D.J. Bennett
