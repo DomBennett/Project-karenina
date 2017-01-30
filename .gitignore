@@ -7,6 +7,7 @@
 *.csv
 *.Rd
 *.tre
+*.pdf
 0_data/
 1_pin/
 2_slice/
