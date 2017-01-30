@@ -40,11 +40,13 @@ if(overwrite | !file.exists(file.path(output.dir, fossilfile))) {
   cat('\n.... searching PBDB')
   records <-  pbdb_occurrences(limit='all',
                                 base_name=parent, vocab="pbdb",
-                                show=c("phylo", "ident"),
-                                stringsAsFactors=FALSE)
+                                show=c("phylo", "ident"))
   # write out
   write.csv(records, file=file.path(output.dir, fossilfile),
              row.names=FALSE)
+  # ensure factors are characters
+  i <- sapply(records, is.factor)
+  records[i] <- lapply(records[i], as.character)
 } else {
   cat('\n.... pre-loading file')
   records <- read.csv(file=file.path(output.dir, fossilfile),
