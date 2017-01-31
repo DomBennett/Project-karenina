@@ -56,6 +56,7 @@ cat('\nDone.')
 
 # EXTRACT NAMES + LINEAGES
 cat('\nAssembling records for pinning ....')
+cat('.... [', nrow(records), '] records downloaded\n')
 # specify ranks in linages for pinning
 taxonomy <- c('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')
 records.obj <- assembleRecords(records, taxonomy, .progress='time')
@@ -63,8 +64,41 @@ lineages <- records.obj[['lineages']]
 max_age <- records.obj[['max.age']]
 min_age <- records.obj[['min.age']]
 binomials <- records.obj[['binomials']]
+# drop fossils older than tree
+pull <- max_age > tree_age
+binomials <- binomials[!pull]
+lineages <- lineages[!pull]
+max_age <- max_age[!pull]
+min_age <- min_age[!pull]
+# drop records with too little lineage info
+nlngs <- sapply(lineages, length)
+pull <- nlngs > 3  # above family
+binomials <- binomials[pull]
+lineages <- lineages[pull]
+max_age <- max_age[pull]
+min_age <- min_age[pull]
+# make sure all are within parent
+pull <- sapply(lineages, function(x) parent %in% x)
+binomials <- binomials[pull]
+lineages <- lineages[pull]
+max_age <- max_age[pull]
+min_age <- min_age[pull]
 rm(records.obj)
 cat('Done. Discovered [', length(binomials), '] records.')
+
+# FOSSIL STATS
+cat('Determining fossil stats....\n')
+fmls <- sapply(lineages, function(x) x[[3]])
+nfmls <- length(unique(fmls))
+cat('.... [', nfmls, '] families\n', sep='')
+gnra <- sapply(lineages, function(x) x[[length(x)]])
+ngnra <- length(unique(gnra))
+cat('.... [', ngnra, '] genera\n', sep='')
+mdpnts <- ((max_age - min_age)/2) + min_age
+#hist(mdpnts, main='', xlab='Fossil midpoint (MYA)')
+cat('.... fossil midpoints:\t')
+print(quantile(mdpnts))
+cat('Done.\n')
 
 # PIN
 cat('\nPinning ....')
