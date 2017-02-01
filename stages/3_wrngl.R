@@ -8,6 +8,7 @@ cat (paste0 ('\nWrangling started at [', Sys.time (), ']'))
 source('parameters.R')
 
 # LIBS
+library(treeman)
 source(file.path ('tools', 'wrngl_tools.R'))
 
 # DIRS
@@ -25,7 +26,7 @@ load(file=file.path(input_dir, 'tree_code.RData'))
 cat('Merging slices in model data ....\n')
 # real
 cat('\n.... real')
-ed_files <- paste0(which(tree_code == 'p'), '.RData')
+ed_files <- paste0(which(tree_code == 'pin'), '.RData')
 ed_files <- file.path(input_dir, ed_files)
 mdl_data <- makeMdlData(ed_files)
 # random
@@ -70,14 +71,27 @@ rnd_data$epoch <- epochs[mtchng]
 rnd_data$epoch <- factor(rnd_data$epoch,
                          levels=epochs)
 # add tree info
-library(treeman)
 tree <- readTree(file.path('0_data', treefile),
                  wndmtrx=FALSE)
 # identify all fossil record nds
 mdl_data$fssl_nd <- !mdl_data$id %in% tree['all']
 mdl_data$fssl_nd <- factor(mdl_data$fssl_nd)
 rm(tree)
-# TODO: add taxonomic using pinned trees
+load(file.path('1_pin', paste0(parent, '_real'), '1.RData'))
+# extract genus and order(ish)
+orders <- c('Monotremata', 'Proboscidea', 'Sirenia', 'Tenrecidae',
+            'Macroscelidea', 'Hyracoidea', 'Chrysochloridae', 'Scandentia',
+            'Primates', 'Dermoptera', 'Rodentia', 'Lagomorpha', 'Carnivora',
+            'Cetartiodactyla', 'Chiroptera', 'Insectivora', 'Perissodactyla',
+            'Pholidota', 'Litopterna', 'Xenarthra', 'Notoungulata', 'Metatheria')
+tips <- tree['tips']
+genera <- unique(sub('_.*$', '', tips))
+res <- plyr::mdply(tree['all'], .fun=getOrdrAndGenera,
+                   .progress='time')
+# add to data
+mtchng <- match(mdl_data[['id']], res[['nid']])
+mdl_data[['order']] <- res[mtchng, 'order']
+mdl_data[['genus']] <- res[mtchng, 'genus']
 cat('Done.\n')
 
 # SAVE

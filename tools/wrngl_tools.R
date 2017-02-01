@@ -1,3 +1,17 @@
+getOrdrAndGenera <- function(nid) {
+  order <- genus <- NA
+  lng <- getNdLng(tree, nid)
+  pssbls <- orders[orders %in% lng]
+  if(length(pssbls) > 0) {
+    order <- pssbls[length(pssbls)]
+  }
+  pssbls <- genera[genera %in% lng]
+  if(length(pssbls) > 0) {
+    genus <- pssbls[length(pssbls)]
+  }
+  data.frame(nid, order, genus)
+}
+
 makeMdlData <- function(ed_files) {
   extrct <- function(j) {
     t0 <- ed_slice[j, ]
