@@ -28,6 +28,14 @@ tree_age <- getAge(tree)
 tree_tips <- tree['tips']
 txnyms <- searchTxnyms(tree, cache=TRUE, parent=parent)
 wtxnyms <- sum(!is.na(txnyms))
+# give parent ID to those with missing txnym
+for(i in which(is.na(txnyms))) {
+  nid <- names(txnyms)[i]
+  while(is.na(txnyms[[i]])) {
+    nid <- getNdSlt(tree, 'prid', nid)
+    txnyms[[i]] <- txnyms[[nid]]
+  }
+}
 tree <- setTxnyms(tree, txnyms)
 cat('\nDone. [', wtxnyms, '/', tree['nall'],
      '] nodes with taxonyms.', sep='')
@@ -84,6 +92,7 @@ lineages <- lineages[pull]
 max_age <- max_age[pull]
 min_age <- min_age[pull]
 rm(records.obj)
+rm(records)
 cat('Done. Discovered [', length(binomials), '] records.')
 
 # FOSSIL STATS

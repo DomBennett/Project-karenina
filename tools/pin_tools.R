@@ -56,9 +56,8 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
     # .... but better to save progress
     # re-jig order in case it impacts pinning
-    rndord <- sample(1:length(tids))
-    tree <- pinTips(tree, tids[rndord], lngs[rndord],
-                    end_ages[rndord], tree_age)
+    tree <- pinTips(tree, tids, lngs,
+                    end_ages, tree_age)
     save(tree, file=file.path(pinfolder, paste0(i, '.RData')))
     NULL
   }
