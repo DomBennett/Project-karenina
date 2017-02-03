@@ -42,12 +42,18 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     })
     tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
     save(tree, file=file.path(pinfolder, '1.RData'))
+    return(NULL)
   }
   # UNIX-only parrelisation
   require (foreach)
   require (doMC)
   registerDoMC (ncpus)
-  trees <- foreach (i=iterations) %dopar% {
+  outfiles <- file.path(pinfolder, paste0(iterations, '.RData'))
+  if(!overwrite) {
+    iterations <- iterations[!file.exists(outfiles)]
+    outfiles <- outfiles[!file.exists(outfiles)]
+  }
+  trees <- foreach(i=iterations) %dopar% {
     cat ('\n........ [', i, ']', sep='')
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
@@ -58,7 +64,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     # re-jig order in case it impacts pinning
     tree <- pinTips(tree, tids, lngs,
                     end_ages, tree_age)
-    save(tree, file=file.path(pinfolder, paste0(i, '.RData')))
+    save(tree, file=outfiles[i])
     NULL
   }
 }
