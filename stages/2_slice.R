@@ -37,11 +37,13 @@ slice_dir <- file.path(output_dir, parent)
 if(!file.exists(slice_dir)) {
   dir.create(slice_dir)
 }
-foreach (i=1:length(tree_files)) %dopar% {
+slice_files <- file.path(slice_dir,paste0(1:length(tree_files), '.RData'))
+is <- which(!sapply(slice_files, file.exists))
+foreach (i=is) %dopar% {
   cat ('\n........ [', i, ']', sep='')
   load(tree_files[[i]])
   ed_slice <- calcEDBySlice(tree, time_cuts)
-  save(ed_slice, file=file.path(slice_dir, paste0(i, '.RData')))
+  save(ed_slice, file=slice_files[i])
   rm(ed_slice)
 }
 cat('Done.')
