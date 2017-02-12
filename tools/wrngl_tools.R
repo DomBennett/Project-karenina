@@ -1,11 +1,11 @@
 getOrdrAndGenera <- function(nid) {
   order <- genus <- NA
   lng <- getNdLng(tree, nid)
-  pssbls <- orders[orders %in% lng]
+  pssbls <- lng[lng %in% orders]
   if(length(pssbls) > 0) {
     order <- pssbls[length(pssbls)]
   }
-  pssbls <- genera[genera %in% lng]
+  pssbls <- lng[lng %in% genera]
   if(length(pssbls) > 0) {
     genus <- pssbls[length(pssbls)]
   }
@@ -17,11 +17,14 @@ makeMdlData <- function(ed_files) {
     t0 <- ed_slice[j, ]
     t1 <- ed_slice[j+1, ]
     tmsplt <- paste0(rownames(ed_slice)[j:(j+1)], collapse='-')
+    age <- as.numeric(rownames(ed_slice)[j])
     tmp <- data.frame(t0=log(as.numeric(t0)),
                       t1=log(as.numeric(t1)),
                       id=names(t0), cnt=1,
-                      tmsplt=tmsplt, stringsAsFactors=FALSE)
+                      tmsplt=tmsplt, age=age,
+                      stringsAsFactors=FALSE)
     tmp <- na.omit(tmp)
+    tmp[['n']] <- length(unique(tmp[['id']]))
     pull <- !tmp$id %in% mdl_data$id[mdl_data$tmsplt == tmsplt]
     if(sum(pull) > 0) {
       mdl_data <- rbind(mdl_data, tmp[pull, ])
@@ -35,12 +38,15 @@ makeMdlData <- function(ed_files) {
         (mdl_data[mtchng, 't0'] + tmp[['t0']])/2
       mdl_data[mtchng, 't1'] <-
         (mdl_data[mtchng, 't1'] + tmp[['t1']])/2
+      mdl_data[mtchng, 'n'] <-
+        (mdl_data[mtchng, 'n'] + tmp[['n']])/2
       mdl_data[mtchng, 'cnt'] <- mdl_data[mtchng, 'cnt'] + 1
     }
     mdl_data <<- mdl_data
     NULL
   }
-  mdl_data <- data.frame(t0=NA, t1=NA, tmsplt=NA, id=NA, cnt=NA)
+  mdl_data <- data.frame(t0=NA, t1=NA, tmsplt=NA, id=NA, cnt=NA,
+                         n=NA, age=NA)
   for(ed_file in ed_files) {
     i <- which(ed_files == ed_file)
     cat('....[', i, '/', length(ed_files),
