@@ -53,8 +53,8 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     iterations <- iterations[!file.exists(outfiles)]
     outfiles <- outfiles[!file.exists(outfiles)]
   }
-  trees <- foreach(i=iterations) %dopar% {
-    cat ('\n........ [', i, ']', sep='')
+  trees <- foreach(i=1:length(iterations)) %dopar% {
+    cat ('\n........ [', iterations[i], ']', sep='')
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
     })
