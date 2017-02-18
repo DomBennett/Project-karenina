@@ -19,19 +19,17 @@ if (!file.exists(output_dir)) {
 }
 input_dir <- file.path(input_dir, parent)
 
-# INPUT
-load(file=file.path(input_dir, 'tree_code.RData'))
-
 # MAKE MODEL DATA
 cat('Merging slices in model data ....\n')
+fls <- list.files(input_dir, pattern='.RData')
 # real
 cat('\n.... real')
-ed_files <- paste0(which(tree_code == 'pin'), '.RData')
+ed_files <- fls[grepl('^real_', fls)]
 ed_files <- file.path(input_dir, ed_files)
 mdl_data <- makeMdlData(ed_files)
 # random
 cat('\n.... random')
-ed_files <- paste0(which(tree_code == 'ra'), '.RData')
+ed_files <- fls[grepl('^rndm_', fls)]
 ed_files <- file.path(input_dir, ed_files)
 rnd_data <- makeMdlData(ed_files)
 cat('Done.\n')
@@ -77,7 +75,8 @@ tree <- readTree(file.path('0_data', treefile),
 mdl_data$fssl_nd <- !mdl_data$id %in% tree['all']
 mdl_data$fssl_nd <- factor(mdl_data$fssl_nd)
 rm(tree)
-load(file.path('1_pin', paste0(parent, '_real'), '1.RData'))
+flp <- file.path('1_pin', paste0(parent, '_real'))
+load(file.path(flp, sample(list.files(flp, pattern='.RData'), 1)))
 # extract genus and order(ish)
 orders <- c('Monotremata', 'Proboscidea', 'Sirenia', 'Tenrecidae',
             'Macroscelidea', 'Hyracoidea', 'Chrysochloridae', 'Scandentia',

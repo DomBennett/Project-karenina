@@ -24,12 +24,9 @@ source(file.path('tools', 'slice_tools.R'))
 
 # LIST FILES
 pinfiles <- list.files(file.path(input_dir, paste0(parent, '_real')))
+pin_is <- sort(as.numeric(sub('\\.RData', '', pinfiles)))
 rndmfiles <- list.files(file.path(input_dir, paste0(parent, '_rndm')))
-tree_files <- c(file.path(input_dir, paste0(parent, '_real'), pinfiles),
-                file.path(input_dir, paste0(parent, '_rndm'), rndmfiles))
-tree_code <- c(rep('pin', each=length(pinfiles)),
-               rep('rnd', each=length(rndmfiles)))
-rm(pinfiles, rndmfiles)
+rnd_is <- sort(as.numeric(sub('\\.RData', '', rndmfiles)))
 
 # CALCULATIONS IN PARALLEL
 cat('Calculating ED by timeslice ....')
@@ -37,19 +34,31 @@ slice_dir <- file.path(output_dir, parent)
 if(!file.exists(slice_dir)) {
   dir.create(slice_dir)
 }
-slice_files <- file.path(slice_dir,paste0(1:length(tree_files), '.RData'))
-is <- which(!sapply(slice_files, file.exists))
-foreach (i=is) %dopar% {
+cat('.... real')
+slice_files <- file.path(slice_dir, paste0('real_', pin_is, '.RData'))
+is <- pin_is[!sapply(slice_files, file.exists)]
+hldr <- foreach (i=is) %dopar% {
+  tfl <- file.path(input_dir, paste0(parent, '_real'), paste0(i, '.RData'))
+  sfl <- file.path(slice_dir, paste0('real_', i, '.RData'))
   cat ('\n........ [', i, ']', sep='')
-  load(tree_files[[i]])
+  load(tfl)
   ed_slice <- calcEDBySlice(tree, time_cuts)
-  save(ed_slice, file=slice_files[i])
+  save(ed_slice, file=sfl)
+  rm(ed_slice)
+}
+cat('.... random')
+slice_files <- file.path(slice_dir, paste0('rndm_', rnd_is, '.RData'))
+is <- rnd_is[!sapply(slice_files, file.exists)]
+hldr <- foreach (i=is) %dopar% {
+  tfl <- file.path(input_dir, paste0(parent, '_rndm'), paste0(i, '.RData'))
+  sfl <- file.path(slice_dir, paste0('rndm_', i, '.RData'))
+  cat ('\n........ [', i, ']', sep='')
+  load(tfl)
+  ed_slice <- calcEDBySlice(tree, time_cuts)
+  save(ed_slice, file=sfl)
   rm(ed_slice)
 }
 cat('Done.')
-
-# OUTPUT
-save(tree_code, file=file.path(slice_dir, 'tree_code.RData'))
 
 # TIMESTAMP
 cat (paste0 ('\nSlicing finished at [', Sys.time (), ']'))
