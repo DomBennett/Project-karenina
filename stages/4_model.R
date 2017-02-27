@@ -1,9 +1,14 @@
 # D.J. Bennett
 # 18/07/2015
-# Model EDt=1 ~ EDt=0
+# Model EDt1 ~ EDt0
+
+# PARAMETERS
+source('parameters.R')
 
 # LIBS
 library(ggplot2)
+library(gridExtra)
+library(lme4)
 
 # DIRS
 input_dir <- '3_wrngl'
@@ -13,129 +18,281 @@ if (!file.exists(output_dir)) {
 }
 
 # INPUT
-load(file.path(input_dir, 'data.RData'))
+load(file=file.path(input_dir, paste0(parent, '.RData')))
+
+# QUICK LOOK
+p1 <- ggplot(mdl_data, aes(x=t0, y=t1, colour=epoch)) +
+  geom_point(alpha=0.05) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme(legend.position='none')
+p2 <- ggplot(mdl_data, aes(x=t0, y=t1, colour=epoch)) +
+  geom_smooth(se=TRUE, formula=y~x) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab('') +
+  theme(legend.title=element_blank())
+text_tt <- theme(text=element_text(size=6))
+tiff(file.path('4_model', 'gam_and_points.tiff'), width=14, height=9, units="cm",
+     res=1200)
+grid.arrange (p1+text_tt,
+              p2+text_tt, ncol=2)
+dev.off()
+p1 <- ggplot(rnd_data, aes(x=t0, y=t1, colour=epoch)) +
+  geom_point(alpha=0.05) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme(legend.position='none')
+p2 <- ggplot(rnd_data, aes(x=t0, y=t1, colour=epoch)) +
+  geom_smooth(se=TRUE, formula=y~x) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab('') +
+  theme(legend.title=element_blank())
+text_tt <- theme(text=element_text(size=6))
+tiff(file.path('4_model', 'gam_and_points_rand.tiff'), width=14, height=9, units="cm",
+     res=1200)
+grid.arrange (p1+text_tt,
+              p2+text_tt, ncol=2)
+dev.off()
+
+# SORT DATA
+# add tax info to rnd
+ints <- match(rnd_data$id, mdl_data$id)
+rnd_data$genus <- mdl_data$genus[ints]
+rnd_data$order <- mdl_data$order[ints]
+# drop last two epochal transitions, seem to be different
+mdl_data <- mdl_data[!mdl_data$epoch %in% c("JU-CL", "CL-CU"), ]
+rnd_data <- rnd_data[!rnd_data$epoch %in% c("JU-CL", "CL-CU"), ]
+# log time difference
+ages <- tapply(mdl_data$age, mdl_data$epoch, mean)
+tm <- ages - c(0, ages[-(length(ages))])
+mdl_data$tm <- tm[mdl_data$epoch]
+order_data <- mdl_data[!is.na(mdl_data[['order']]), ]
+genus_data <- order_data[!is.na(order_data[['genus']]), ]
+genus_data$age <- log(genus_data$age)
+genus_data$n <- log(genus_data$n)
+genus_data$tm <- log(genus_data$tm)
+# t0 dummy, rounded t0 between 0 and 1
+# I found this method better than other methods because it does not over-represent
+# the extreme values
+# bins <- seq(min(genus_data$t0)-0.00001, max(genus_data$t0), length.out=5)
+# genus_data$t0_dummy <- as.numeric(cut(genus_data$t0, bins))
+# genus_data$t0_dummy <- as.numeric(genus_data$t0 > mean(genus_data$t0))
+genus_data$t0_dummy <- round(genus_data$t0)
+genus_data$t0_dummy <- genus_data$t0_dummy/max(genus_data$t0_dummy)
+hist(genus_data$t0_dummy)
+plot(genus_data$t0_dummy, genus_data$t0)
+# clean up
+rm(order_data)
+
+# ASSESS WHETHER RND AND REAL DIFFER
+tree_ids <- mdl_data$id[!as.logical(mdl_data$fssl_nd)]
+all_data <- data.frame(ids=c(mdl_data$id, rnd_data$id),
+                       t0=c(mdl_data$t0, rnd_data$t0),
+                       t1=c(mdl_data$t1, rnd_data$t1),
+                       sd=c(mdl_data$sd_ed, rnd_data$sd_ed),
+                       epoch=c(mdl_data$epoch, rnd_data$epoch),
+                       real=c(rep('Real', nrow(mdl_data)),
+                              rep('Random', nrow(rnd_data))))
+all_data$fssl_nd <- !all_data$ids %in% tree_ids
+all_data$tdff <- all_data$t0 - all_data$t1
+xlbl <- expression(paste('ED'['t0'], ' - ED'['t1']))
+# tdff
+p1 <- ggplot(all_data, aes(tdff, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab(xlbl) + ylab('') +
+  theme(legend.position='none')
+# tdff without tree ids
+ggplot(all_data[all_data$fssl_nd, ], aes(tdff, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab(xlbl) + ylab('') +
+  theme(legend.title = element_blank())
+# F-test
+rl_tdffs <- all_data[all_data$real == 'Real', 'tdff']
+rnd_tdffs <- all_data[all_data$real == 'Random', 'tdff']
+var.test(rnd_tdffs, rl_tdffs)
+var(rnd_tdffs, na.rm=TRUE)
+var(rl_tdffs, na.rm=TRUE)
+# check SD
+p2 <- ggplot(all_data[all_data$fssl_nd, ], aes(sd, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab('Std. Dv. of ED') + ylab('') +
+  theme(legend.title = element_blank())
+# F-test
+rl_sds <- all_data[all_data$real == 'Real' & all_data$fssl_nd, 'sd']
+rnd_sds <- all_data[all_data$real == 'Random' & all_data$fssl_nd, 'sd']
+t.test(rnd_sds, rl_sds)
+mean(rnd_sds, na.rm=TRUE)
+mean(rl_sds, na.rm=TRUE)
+# save plots
+text_tt <- theme(text=element_text(size=6))
+tiff(file.path('4_model', 'diff_rand_real.tiff'), width=14, height=9, units="cm",
+     res=1200)
+grid.arrange(p1+text_tt, p2+text_tt, ncol=2)
+dev.off()
+
+# CHECK PINNING/FOSSILS
+# is there a relationship between ED and number of times a clade appears?
+genus_data$mean_ed <- (genus_data$t0+genus_data$t1)/2
+m <- lm(mean_ed~cnt, data=genus_data)
+summary(m) # VERY small decrease, little evidence that random clades are steering the results
+p1 <- ggplot(genus_data, aes(y=mean_ed, x=cnt)) + geom_point(alpha=0.1) +
+  geom_smooth(method='lm', se = TRUE) + xlab('No. clade counts') +
+  ylab('ED') + theme_bw()
+# is there a difference between fossil and non-fossil nodes?
+genus_data$Fossil <- genus_data$fssl_nd
+p2 <- ggplot(genus_data, aes(mean_ed, colour=fssl_nd, fill=Fossil)) +
+  geom_density(alpha=0.5) + ylab('') + xlab('ED') + theme_bw()
+t.test(genus_data$mean_ed[as.logical(genus_data$fssl_nd)],
+       genus_data$mean_ed[!as.logical(genus_data$fssl_nd)])
+t.test(genus_data$tm[as.logical(genus_data$fssl_nd)],
+       genus_data$tm[!as.logical(genus_data$fssl_nd)])
+# yes, presumably because fossil nodes went extinct, while ones in the tree survived
 
 
+# MODEL SELECTION
+# exp linear model
+m0 <- lm(t1~t0, data=genus_data)
+m1a <- lmer(t1~t0 + (1|epoch), data=genus_data, REML=FALSE)
+m1b <- lmer(t1~t0 + (t0|epoch), data=genus_data, REML=FALSE)
+m2a <- lmer(t1~t0 + (t0|epoch) + (1|order), data=genus_data, REML=FALSE)
+m2b <- lmer(t1~t0 + (t0|epoch) + (1|genus), data=genus_data, REML=FALSE)
+m2c <- lmer(t1~t0 + (t0|epoch) + (1|order/genus), data=genus_data, REML=FALSE)
+m2d <- lmer(t1~t0 + (t0|epoch) + (1|id), data=genus_data, REML=FALSE)
+m2e <- lmer(t1~t0 + (t0|epoch) + (1|order/id), data=genus_data, REML=FALSE)
+m2f <- lmer(t1~t0 + (t0|epoch) + (t0|order), data=genus_data, REML=FALSE)
+m2g <- lmer(t1~t0 + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m2h <- lmer(t1~t0 + (t0|epoch) + (t0|id), data=genus_data, REML=FALSE)
+AIC(m0)
+anova(m1a, m1b)
+anova(m1b, m2a)
+anova(m2a, m2b)
+anova(m2b, m2c)
+anova(m2c, m2d)
+anova(m2c, m2e)
+anova(m2c, m2f)
+anova(m2c, m2g)
+anova(m2g, m2h)
+# m2g is best
 
+# fitting polynomials
+m3a <- lmer(t1~poly(t0, 2) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m2g, m3a)
+m3b <- lmer(t1~poly(t0, 3) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3a, m3b)
+m3c <- lmer(t1~poly(t0, 4) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3b, m3c)
+m3d <- lmer(t1~poly(t0, 5) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3c, m3d)
+m3e <- lmer(t1~poly(t0, 6) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3d, m3e)
+# opt for 3c
+obs_mdl <- m3c
+save(m3c, file=file.path('4_model', 'obs_mdl.RData'))
 
+# fitting exp ln
+n0a <- lm(t1~tm, data=genus_data)
+n0b <- lm(t1~n, data=genus_data)
+n0c <- lm(t1~tm+n, data=genus_data)
+n0d <- lm(t1~t0_dummy, data=genus_data)
+n0e <- lm(t1~t0_dummy+tm+n, data=genus_data)
+anova(n0a, n0b)
+anova(n0a, n0c)
+anova(n0c, n0d)
+anova(n0d, n0e)
+AIC(n0a, n0b, n0c, n0d, n0e)
+n1a <- lmer(t1~t0_dummy+tm+n+(1|order), data=genus_data, REML=FALSE)
+n1b <- lmer(t1~t0_dummy+tm+n+(1|genus), data=genus_data, REML=FALSE)
+n1c <- lmer(t1~t0_dummy+tm+n+(1|id), data=genus_data, REML=FALSE)
+anova(n1a, n1b)
+anova(n1b, n1c)
+n1d <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus), data=genus_data, REML=FALSE)
+n1e <- lmer(t1~t0_dummy+tm+n+(tm|genus), data=genus_data, REML=FALSE)
+n1f <- lmer(t1~t0_dummy+tm+n+(n|genus), data=genus_data, REML=FALSE)
+anova(n1b, n1d)
+anova(n1e, n1d)
+anova(n1f, n1e)
+n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(tm|genus), data=genus_data, REML=FALSE)
+anova(n1e, n1g)
+n1h <- lmer(t1~t0_dummy+tm+n+(1|order/genus), data=genus_data, REML=FALSE)
+anova(n1h, n1g)
+# opt for n1g
+exp_mdl <- n1g
+save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
 
+# OPTED MODELS
+load(file.path('4_model', 'exp_mdl.RData'))
+load(file.path('4_model', 'obs_mdl.RData'))
 
-ggplot(mdl_data, aes(x=t0, y=t1, colour=tmsplt)) +
-  geom_smooth(method='lm', se=TRUE, formula=y~x)
-
-mdl_data <- mdl_data[!mdl_data$tmsplt %in% c("122.75-83.25", "154.25-122.75"), ]
-
-
-library(lme4)
-
-# fit t0 and tmpslt
-m1 <- lmer(t1~1 + (1|tmsplt), data=mdl_data, REML=FALSE)
-m2 <- lmer(t1~t0 + (1|tmsplt), data=mdl_data, REML=FALSE)
-m3 <- lmer(t1~t0 + (t0|tmsplt), data=mdl_data, REML=FALSE)
-anova(m1, m2, m3)
-anova(m2, m3)  # definitely need random slopes
-AIC(m2, m3)
-# fit ^2
-m4 <- lmer(t1~I(t0^2)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-m5 <- lmer(t1~t0+I(t0^2)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-anova(m3, m4)
-anova(m4, m5)
-# fit ^3
-m6 <- lmer(t1~I(t0^3)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-m7 <- lmer(t1~t0+I(t0^3)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-anova(m3, m6)
-anova(m6, m7)
-anova(m5, m7) # third polynomial is worse fit than second
-# fit polys
-m8 <- lmer(t1~poly(t0, 2)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-m9 <- lmer(t1~poly(t0, 3)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-m10 <- lmer(t1~poly(t0, 4)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-m11 <- lmer(t1~poly(t0, 5)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-anova(m8, m9, m10, m11)
-# compare to non-orthos
-anova(m5, m8)
-anova(m7, m9)
-# m5 is best with t0, m9 is best poly
-anova(m5, m9)
-anova(m9, m10)
-
-# Experimental
-m12 <- lmer(t1~I(t0^.5)+(t0|tmsplt), data=mdl_data, REML=FALSE)
-anova(m12, m10)
-anova(m12, m5)
-anova(m9, m10, m12)
-AIC(m9, m10)
-
-# PLOT
-mdl_data$fit <- predict(m9)
-m3
-ggplot(mdl_data, aes(x=t0, y=t1, group=tmsplt, col=tmsplt)) + 
-  geom_abline(intercept=1.4225, slope=0.6537, lty=3) +
-  geom_point(alpha=0.01) +
-  geom_line(aes(y=fit), lwd=2) +
+# PLOTTING
+# create representative dataset of equal numbers epoch and sample genera
+t0 <- seq(min(genus_data$t0), max(genus_data$t0), length.out=100)
+rpsnttv <- expand.grid(t0=t0,
+                       genus=sample(unique(genus_data$genus), 100),
+                       epoch=unique(genus_data$epoch))
+rpsnttv$order <- genus_data$order[match(rpsnttv$genus, genus_data$genus)]
+ns <- tapply(genus_data$n, genus_data$epoch, mean)
+rpsnttv$n <- ns[rpsnttv$epoch]
+tm <- tapply(genus_data$tm, genus_data$epoch, mean)
+rpsnttv$tm <- tm[rpsnttv$epoch]
+rpsnttv$t0_dummy <- rpsnttv$t0/max(rpsnttv$t0)
+rpsnttv$pfit <- predict(obs_mdl, rpsnttv)
+rpsnttv$nfit <- predict(exp_mdl, rpsnttv)
+# overall
+p_data <- plyr::ddply(rpsnttv, c('t0'), plyr::summarise,
+                      pfit=median(pfit), nfit=median(nfit))
+p <- ggplot(p_data, aes(x=t0, y=pfit)) + 
+  geom_line(aes(y=pfit), lwd=1) +
+  geom_line(aes(y=nfit), lwd=1, lty=2) +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
   theme_bw()
-
-ggplot(mdl_data, aes(x=t0, y=t1)) +
-  geom_point(aes(colour=tmsplt), alpha=.01) +
-  stat_smooth(method='lm', formula=y~x, se=FALSE,
-              colour='black', lty=3) +
-  stat_smooth(method='lm', formula=y~poly(x, 3), se=FALSE,
-              colour='black', lwd=2) +
+tiff(file.path('4_model', 'overall.tiff'), width=9, height=9, units="cm",
+     res=1200)
+print(p)
+dev.off()
+# by epoch
+p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
+                      pfit=median(pfit), nfit=median(nfit))
+p <- ggplot(p_data, aes(x=t0, y=pfit)) + 
+  geom_line(aes(y=pfit), lwd=1) +
+  geom_line(aes(y=nfit), lwd=1, lty=2) +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
   theme_bw()
-  
+p <- p + facet_grid(epoch ~ .)
+tiff(file.path('4_model', 'by_epoch.tiff'), width=9, height=14, units="cm",
+     res=1200)
+print(p + theme(text=element_text(size=6)))
+dev.off()
 
 
-# fit t0 and tmpslt
-m1 <- lm(t1~1, data=mdl_data)
-m2 <- lm(t1~1+factor(tmsplt)-1, data=mdl_data)
-m3 <- lm(t1~t0+factor(tmsplt)-1, data=mdl_data)
-anova(m1, m2, m3)  # adding tmsplt and t0 massively improves model
-# fit ^2
-m4 <- lm(t1~I(t0^2)+factor(tmsplt)-1, data=mdl_data)
-m5 <- lm(t1~t0+I(t0^2)+factor(tmsplt)-1, data=mdl_data)
-m6 <- lm(t1~poly(t0, 2)+factor(tmsplt)-1, data=mdl_data)
-m7 <- lm(t1~t0+poly(t0, 2)+factor(tmsplt)-1, data=mdl_data)
-anova(m4, m5, m6, m7) # raw ^2 with t0 is best fit, little improvement with complexity
-# fit ^3
-m8 <- lm(t1~I(t0^3)+factor(tmsplt)-1, data=mdl_data)
-m9 <- lm(t1~t0+I(t0^3)+factor(tmsplt)-1, data=mdl_data)
-m10 <- lm(t1~poly(t0, 3)+factor(tmsplt)-1, data=mdl_data)
-m11 <- lm(t1~t0+poly(t0, 3)+factor(tmsplt)-1, data=mdl_data)
-anova(m8, m9, m10, m11) # slightly better fit for orthogonal poly 3
-anova(m5, m9, m10)  # marginally better fit for orthogonal poly 3
-anova(m5, m9)  # no difference between poly 2 and 3
-# fit ^4
-m12 <- lm(t1~I(t0^4)+factor(tmsplt)-1, data=mdl_data)
-m13 <- lm(t1~t0+I(t0^4)+factor(tmsplt)-1, data=mdl_data)
-m14 <- lm(t1~poly(t0, 4)+factor(tmsplt)-1, data=mdl_data)
-m15 <- lm(t1~t0+poly(t0, 4)+factor(tmsplt)-1, data=mdl_data)
-anova(m12, m13, m14, m15) # best fit for orthogonal poly 4
-anova(m5, m9, m10, m13)  # orthogonal out-perform
-anova(m5, m9, m13) # no difference between each of the polys
-# which is best?
-AIC(m1, m2, m3, m5, m9, m10, m13)  # M5 is best performing non-orthogonal
-anova(m10, m14)
+# DIAGNOSTICS
+library(sjPlot)
+library(sjmisc)
+sjp.lmer(exp_mdl, type = "fe")
+sjp.lmer(obs_mdl, type = "fe")
+sjp.lmer(obs_mdl, type = "re.qq")
 
-# PLOT
-# M5
-ggplot(mdl_data, aes(x=t0, y=t1, colour=factor(tmsplt))) +
-  geom_point(alpha=.5) +
-  stat_smooth(method='lm', se=TRUE, formula=y~x,
-              colour='blue', fill='blue') +
-  stat_smooth(method='lm', se=TRUE, formula=y~I(x^2),
-              colour='red', fill='red')
-# M10
-ggplot(mdl_data, aes(x=t0, y=t1, colour=factor(tmsplt))) +
-  geom_point(alpha=.5) +
-  stat_smooth(method='lm', se=TRUE, formula=y~poly(x, 3),
-              colour='red', fill='red')
-# M14
-ggplot(mdl_data, aes(x=t0, y=t1, colour=factor(tmsplt))) +
-  geom_point(alpha=.5) +
-  stat_smooth(method='lm', se=TRUE, formula=y~poly(x, 4),
-              colour='red', fill='red')
 
-# OPTING FOR M5:
-# - we want to find the model on top of the linear regression with t0, only m5 has the linear regression and a polynomial
-# - m5 is simplest
-# - there is a step change in model improvement up to m5, additional parameters lead to only marginal AIC drop
+# COMPARE REAL AND RANDOM POLY 3
+# use (1|genus) because (t0|genus) is not computable in real time
+rndmdl <- lmer(t1~poly(t0, 3)+(t0|epoch)+(1|genus), data=rnd_data, REML=FALSE)
+rlmdl <- lmer(t1~poly(t0, 3)+(t0|epoch)+(1|genus), data=genus_data, REML=FALSE)
+# create representative p_data
+t0 <- seq(min(rnd_data$t0), max(rnd_data$t0), length.out=100)
+rnd_rep <- rl_rep <- expand.grid(t0=t0, genus=sample(genus_data$genus, 100),
+                                 epoch=as.character(unique(rnd_data$epoch)))
+rnd_rep$fit <- predict(rndmdl, rnd_rep)
+rl_rep$fit <- predict(rlmdl, rl_rep)
+rpsnttv <- rbind(rnd_rep, rl_rep)
+rpsnttv$real <- c(rep('Random', nrow(rnd_rep)),
+                  rep('Real', nrow(rl_rep)))
+p_data <- plyr::ddply(rpsnttv, c('t0', 'real'), plyr::summarise,
+                      fit=mean(fit))
+# plot
+p <- ggplot(p_data, aes(x=t0, y=fit, colour=real)) + 
+  geom_line(aes(y=fit), lwd=1) +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme_bw() + theme(legend.title=element_blank())
+tiff(file.path('4_model', 'real_rndm_p3.tiff'), width=9, height=9, units="cm",
+     res=1200)
+print(p + theme(text=element_text(size=6)))
+dev.off()
