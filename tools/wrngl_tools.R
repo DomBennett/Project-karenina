@@ -25,27 +25,9 @@ makeMdlData <- function(ed_files) {
                       stringsAsFactors=FALSE)
     tmp <- na.omit(tmp)
     tmp[['n']] <- length(unique(tmp[['id']]))
-    pull <- !tmp$id %in% mdl_data$id[mdl_data$tmsplt == tmsplt]
-    if(sum(pull) > 0) {
-      mdl_data <- rbind(mdl_data, tmp[pull, ])
-    }
-    if(sum(!pull) > 0) {
-      tmp <- tmp[!pull, ]
-      tmsplt_i <- which(mdl_data$tmsplt == tmsplt)
-      mtchng <- match(tmp$id, mdl_data$id[tmsplt_i])
-      mtchng <- tmsplt_i[mtchng]
-      mdl_data[mtchng, 't0'] <-
-        (mdl_data[mtchng, 't0'] + tmp[['t0']])/2
-      mdl_data[mtchng, 't1'] <-
-        (mdl_data[mtchng, 't1'] + tmp[['t1']])/2
-      mdl_data[mtchng, 'n'] <-
-        (mdl_data[mtchng, 'n'] + tmp[['n']])/2
-      mdl_data[mtchng, 'cnt'] <- mdl_data[mtchng, 'cnt'] + 1
-    }
-    mdl_data <<- mdl_data
-    NULL
+    tmp
   }
-  mdl_data <- data.frame(t0=NA, t1=NA, tmsplt=NA, id=NA, cnt=NA,
+  t0t1s <- data.frame(t0=NA, t1=NA, tmsplt=NA, id=NA, cnt=NA,
                          n=NA, age=NA)
   for(ed_file in ed_files) {
     i <- which(ed_files == ed_file)
@@ -55,9 +37,14 @@ makeMdlData <- function(ed_files) {
       next
     }
     load(ed_file)
-    tmp <- sapply(1:(nrow(ed_slice) - 1), extrct)
+    tmp <- plyr::mdply(1:(nrow(ed_slice) - 1), extrct)[ ,-1]
+    t0t1s <- rbind(t0t1s, tmp)
     rm(ed_slice)
   }
-  mdl_data <- mdl_data[-1, ]
+  t0t1s <- t0t1s[-1, ]
+  t0t1s$ed <- (t0t1s$t0 + t0t1s$t1)/2
+  mdl_data <- plyr::ddply(t0t1s, c('id', 'tmsplt', 'age'), plyr::summarise,
+                          t0=mean(t0), t1=mean(t1), mean_ed=mean(ed),
+                          sd_ed=sd(ed), cnt=sum(cnt), n=mean(n))
   mdl_data
 }
