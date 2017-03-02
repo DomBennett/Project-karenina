@@ -78,7 +78,7 @@ calcEDBySlice <- function (tree, time_cuts) {
   for(i in 1:length(time_cuts)) {
     # drop tips extinct by time cut
     tp_ages <- nd_spns[nd_spns[['spn']] %in% tree@tips, c('spn', 'end')]
-    bool <- tp_ages[['end']] > time_cuts[i]
+    bool <- tp_ages[['end']] > time_cuts[i] + 0.00001 # zero tolerance control
     if(any(bool)) {
       to_drp <- tp_ages[['spn']][bool]
       tree <- rmTips(tree, tids=to_drp)
