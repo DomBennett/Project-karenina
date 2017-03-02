@@ -54,6 +54,19 @@ grid.arrange (p1+text_tt,
               p2+text_tt, ncol=2)
 dev.off()
 
+# BASIC STATS
+nrow(mdl_data)
+quantile(mdl_data$cnt)
+nrow(rnd_data)
+quantile(rnd_data$cnt)
+p_data <- data.frame(cnt=c(mdl_data$cnt, rnd_data$cnt),
+                     real=c(rep('Real', nrow(mdl_data)),
+                            rep('Random', nrow(rnd_data))))
+ggplot(p_data, aes(cnt, colour=real, fill=real)) + geom_density(alpha=0.5)
+# mean number of species in t0 by epoch
+tapply(mdl_data$n, mdl_data$epoch, mean)
+
+
 # SORT DATA
 # add tax info to rnd
 ints <- match(rnd_data$id, mdl_data$id)
@@ -192,6 +205,7 @@ n0b <- lm(t1~n, data=genus_data)
 n0c <- lm(t1~tm+n, data=genus_data)
 n0d <- lm(t1~t0_dummy, data=genus_data)
 n0e <- lm(t1~t0_dummy+tm+n, data=genus_data)
+n0f <- lm(t1~t0_dummy+tm+n+age, data=genus_data)
 anova(n0a, n0b)
 anova(n0a, n0c)
 anova(n0c, n0d)
