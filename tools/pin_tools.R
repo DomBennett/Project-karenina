@@ -37,6 +37,7 @@ pinParallel <- function (tree, tids, lngs, min_ages, max_ages, pinfolder) {
     dir.create(pinfolder)
   }
   if(ncpus < 2) {
+    # doesn't iterate without parallel
     end_ages <- sapply(1:length(tids), function(x){
       runif(1, min=min_ages[x], max=max_ages[x])
     })

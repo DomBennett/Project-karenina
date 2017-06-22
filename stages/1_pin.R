@@ -85,8 +85,8 @@ binomials <- binomials[pull]
 lineages <- lineages[pull]
 max_age <- max_age[pull]
 min_age <- min_age[pull]
-# make sure all are within parent
-pull <- sapply(lineages, function(x) parent %in% x)
+# make sure all are within Mammalia
+pull <- sapply(lineages, function(x) 'Mammalia' %in% x)
 binomials <- binomials[pull]
 lineages <- lineages[pull]
 max_age <- max_age[pull]
