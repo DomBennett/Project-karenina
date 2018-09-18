@@ -74,6 +74,7 @@ min_age <- records.obj[['min.age']]
 binomials <- records.obj[['binomials']]
 # drop fossils older than tree
 pull <- max_age > tree_age
+cat('... [', sum(pull), '] records out of age range', '\n', sep='')
 binomials <- binomials[!pull]
 lineages <- lineages[!pull]
 max_age <- max_age[!pull]
@@ -81,12 +82,14 @@ min_age <- min_age[!pull]
 # drop records with too little lineage info
 nlngs <- sapply(lineages, length)
 pull <- nlngs > 3  # above family
+cat('... [', sum(!pull), '] records with too few ranks', '\n', sep='')
 binomials <- binomials[pull]
 lineages <- lineages[pull]
 max_age <- max_age[pull]
 min_age <- min_age[pull]
 # make sure all are within parent
 pull <- sapply(lineages, function(x) parent %in% x)
+cat('... [', sum(!pull), '] records not within parent', '\n', sep='')
 binomials <- binomials[pull]
 lineages <- lineages[pull]
 max_age <- max_age[pull]
