@@ -40,6 +40,10 @@ plotKidsAge <- function(tree1, tree2) {
   p + theme_bw()
 }
 
+
+plotKidsAge(mammals, tree)
+
+data(mammals)
 tree1 <- mammals
 tree2 <- tree
 
@@ -50,6 +54,9 @@ sum(log(nkids) == log(2))
 
 tree@nodelist[[10922]]
 log(nkids)[10922]
+
+
+load('1_pin/Mammalia_real/1.RData')
 
 load('big_tree.RData')
 writeTree(tree, file='big_tree.tre')

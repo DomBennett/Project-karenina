@@ -20,6 +20,9 @@ if (!file.exists(output_dir)) {
 # INPUT
 load(file=file.path(input_dir, paste0(parent, '.RData')))
 
+# REMOVE IMPOSSIBLE RESULTS
+rnd_data <- rnd_data[rnd_data$t0 > 0, ]
+
 # QUICK LOOK
 p1 <- ggplot(mdl_data, aes(x=t0, y=t1, colour=epoch)) +
   geom_point(alpha=0.05) + theme_bw() +
@@ -73,12 +76,15 @@ ints <- match(rnd_data$id, mdl_data$id)
 rnd_data$genus <- mdl_data$genus[ints]
 rnd_data$order <- mdl_data$order[ints]
 # drop last two epochal transitions, seem to be different
+n_by_epoch <- table(mdl_data$epoch)
+mean(n_by_epoch[c(-8, -9)])
 mdl_data <- mdl_data[!mdl_data$epoch %in% c("JU-CL", "CL-CU"), ]
 rnd_data <- rnd_data[!rnd_data$epoch %in% c("JU-CL", "CL-CU"), ]
 # log time difference
 ages <- tapply(mdl_data$age, mdl_data$epoch, mean)
 tm <- ages - c(0, ages[-(length(ages))])
 mdl_data$tm <- tm[mdl_data$epoch]
+mean(mdl_data$tm[match(unique(mdl_data$epoch), mdl_data$epoch)])
 order_data <- mdl_data[!is.na(mdl_data[['order']]), ]
 genus_data <- order_data[!is.na(order_data[['genus']]), ]
 genus_data$age <- log(genus_data$age)
@@ -105,11 +111,12 @@ all_data <- data.frame(ids=c(mdl_data$id, rnd_data$id),
                        sd=c(mdl_data$sd_ed, rnd_data$sd_ed),
                        epoch=c(mdl_data$epoch, rnd_data$epoch),
                        real=c(rep('Real', nrow(mdl_data)),
-                              rep('Random', nrow(rnd_data))))
+                              rep('Random', nrow(rnd_data))),
+                       cnt=c(mdl_data$cnt, rnd_data$cnt))
 all_data$fssl_nd <- !all_data$ids %in% tree_ids
 all_data$tdff <- all_data$t0 - all_data$t1
-xlbl <- expression(paste('ED'['t0'], ' - ED'['t1']))
 # tdff
+xlbl <- expression(paste('ED'['t0'], ' - ED'['t1']))
 p1 <- ggplot(all_data, aes(tdff, colour=real, fill=real)) +
   geom_density(alpha=0.5) + theme_bw() + xlab(xlbl) + ylab('') +
   theme(legend.position='none')
@@ -120,24 +127,40 @@ ggplot(all_data[all_data$fssl_nd, ], aes(tdff, colour=real, fill=real)) +
 # F-test
 rl_tdffs <- all_data[all_data$real == 'Real', 'tdff']
 rnd_tdffs <- all_data[all_data$real == 'Random', 'tdff']
+t.test(rnd_tdffs, rl_tdffs)
 var.test(rnd_tdffs, rl_tdffs)
 var(rnd_tdffs, na.rm=TRUE)
 var(rl_tdffs, na.rm=TRUE)
+# cnt
+p2 <- ggplot(all_data, aes(cnt, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab('No. occurrences across iterations') + ylab('') +
+  theme(legend.position='none')
 # check SD
-p2 <- ggplot(all_data[all_data$fssl_nd, ], aes(sd, colour=real, fill=real)) +
+p3 <- ggplot(all_data[all_data$fssl_nd, ], aes(sd, colour=real, fill=real)) +
   geom_density(alpha=0.5) + theme_bw() + xlab('Std. Dv. of ED') + ylab('') +
+  theme(legend.position='none')
+ggplot(all_data, aes(sd, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab('Std. Dv. of ED of shared nodes') + ylab('') +
   theme(legend.title = element_blank())
-# F-test
+# SD of Shared Nodes
 rl_sds <- all_data[all_data$real == 'Real' & all_data$fssl_nd, 'sd']
 rnd_sds <- all_data[all_data$real == 'Random' & all_data$fssl_nd, 'sd']
 t.test(rnd_sds, rl_sds)
 mean(rnd_sds, na.rm=TRUE)
 mean(rl_sds, na.rm=TRUE)
+sum(!is.na(rnd_sds))
+sum(!is.na(rl_sds))
 # save plots
 text_tt <- theme(text=element_text(size=6))
-tiff(file.path('4_model', 'diff_rand_real.tiff'), width=14, height=9, units="cm",
+# get legend
+p_null <- ggplot(all_data, aes(cnt, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + theme(legend.title = element_blank())
+tmp <- ggplot_gtable(ggplot_build(p_null)) 
+leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
+legend <- tmp$grobs[[leg]]
+tiff(file.path('4_model', 'diff_rand_real.tiff'), width=14, height=14, units="cm",
      res=1200)
-grid.arrange(p1+text_tt, p2+text_tt, ncol=2)
+grid.arrange(p1+text_tt, p2+text_tt, p3+text_tt, legend, ncol=2)
 dev.off()
 
 # CHECK PINNING/FOSSILS
@@ -285,6 +308,7 @@ sjp.lmer(obs_mdl, type = "fe")
 sjp.lmer(obs_mdl, type = "re.qq")
 
 
+
 # COMPARE REAL AND RANDOM POLY 3
 # use (1|genus) because (t0|genus) is not computable in real time
 rndmdl <- lmer(t1~poly(t0, 3)+(t0|epoch)+(1|genus), data=rnd_data, REML=FALSE)
@@ -307,6 +331,20 @@ p <- ggplot(p_data, aes(x=t0, y=fit, colour=real)) +
   ylab(expression('ED'['t1'])) +
   theme_bw() + theme(legend.title=element_blank())
 tiff(file.path('4_model', 'real_rndm_p3.tiff'), width=9, height=9, units="cm",
+     res=1200)
+print(p + theme(text=element_text(size=6)))
+dev.off()
+
+# PLOTTING CONFIDENT POINTS
+mdl_data$c50 <- '< 50'
+mdl_data$c50[mdl_data$cnt > 50] <- '> 50'
+mdl_data$c50[mdl_data$cnt < 50] <- '< 50'
+p <- ggplot(mdl_data, aes(x=t0, y=t1, colour=c50)) +
+  geom_smooth(se=TRUE, formula=y~x) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme(legend.title=element_blank())
+tiff(file.path('4_model', 'confident_vs_unconfident.tiff'), width=9, height=9, units="cm",
      res=1200)
 print(p + theme(text=element_text(size=6)))
 dev.off()
