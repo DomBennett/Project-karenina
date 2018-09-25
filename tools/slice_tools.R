@@ -1,23 +1,23 @@
 
-calcFrPrp <- function(tree, tids, progress="none") {
+calcFrPrp <- function(tree, tids, progress = "none") {
   .calc <- function(i) {
     id <- tree@all[i]
     spn <- getNdSlt(tree, "spn", id)
     kids <- getNdKids(tree, id)
-    if(length(kids) == 0) {
+    if (length(kids) == 0) {
       spn_shres[i, id] <<- spn
     } else {
       spn_shre <- spn/length(kids)
       spn_shres[i, kids] <<- spn_shre
     }
   }
-  spn_shres <- bigmemory::big.matrix(init=0, ncol=tree@ntips,
-                                     nrow=tree@nall,
-                                     shared=FALSE)
-  options(bigmemory.allow.dimnames=TRUE)
+  spn_shres <- bigmemory::big.matrix(init = 0, ncol = tree@ntips,
+                                     nrow = tree@nall,
+                                     shared = FALSE)
+  options(bigmemory.allow.dimnames = TRUE)
   colnames(spn_shres) <- tree@tips
-  plyr::m_ply(.data=data.frame(i=1:tree@nall), .fun = .calc,
-              .progress=progress)
+  plyr::m_ply(.data = data.frame(i = 1:tree@nall), .fun = .calc,
+              .progress = progress)
   colSums(spn_shres[, tids])
 }
 
@@ -56,10 +56,10 @@ timeslice <- function(tree, tm_ct, nd_spns) {
   newtree
 }
 
-
-calcEDBySlice <- function (tree, time_cuts) {
+calcEDBySlice <- function(tree, time_cuts) {
   # Return ED values for clades at different time slices
   # Internals
+  slcd <- fp_vals <- NULL
   getNdFP <- function(id) {
     kids <- getNdKids(slcd, id)
     mean(fp_vals[kids])
@@ -67,26 +67,26 @@ calcEDBySlice <- function (tree, time_cuts) {
   # for time callibrated tree
   tree_age <- getAge(tree)
   time_cuts <- time_cuts[time_cuts < tree_age]
-  time_cuts <- sort(time_cuts, decreasing=TRUE)
+  time_cuts <- sort(time_cuts, decreasing = TRUE)
   # gen res mtrx
-  res <- matrix(NA, nrow=length(time_cuts),
-                ncol=tree['nall'])
+  res <- matrix(NA, nrow = length(time_cuts),
+                ncol = tree['nall'])
   rownames(res) <- time_cuts
   colnames(res) <- tree['all']
-  nd_spns <- getSpnsAge(tree, tree@all, tree_age=tree_age)
+  nd_spns <- getSpnsAge(tree, tree@all, tree_age = tree_age)
   nd_spns[['spn']] <- as.character(nd_spns[['spn']])
-  for(i in 1:length(time_cuts)) {
+  for (i in 1:length(time_cuts)) {
     # drop tips extinct by time cut
     tp_ages <- nd_spns[nd_spns[['spn']] %in% tree@tips, c('spn', 'end')]
     bool <- tp_ages[['end']] > time_cuts[i] + 0.00001 # zero tolerance control
-    if(any(bool)) {
+    if (any(bool)) {
       to_drp <- tp_ages[['spn']][bool]
-      tree <- rmTips(tree, tids=to_drp)
+      tree <- rmTips(tree, tids = to_drp)
       nd_spns <- nd_spns[nd_spns[['spn']] %in% tree@all, ]
     }
     # slice tree at interval
-    slcd <- timeslice(tree=tree, tm_ct=time_cuts[i],
-                      nd_spns=nd_spns)
+    slcd <- timeslice(tree = tree, tm_ct = time_cuts[i],
+                      nd_spns = nd_spns)
     # get ed vals (tips and mean tips for nodes)
     fp_vals <- calcFrPrp(slcd, slcd['tips'])
     kids <- getNdsKids(slcd, slcd['nds'])
