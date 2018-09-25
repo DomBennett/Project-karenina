@@ -63,7 +63,7 @@ cat('\nDone.')
 
 # EXTRACT NAMES + LINEAGES
 cat('\nAssembling records for pinning ....')
-cat('.... [', nrow(records), '] records downloaded\n')
+cat('.... [', nrow(records), '] records downloaded\n', sep = '')
 # specify ranks in linages for pinning
 taxonomy <- c('phylum', 'class', 'order', 'family', 'genus_name',
               'species_name')
@@ -87,14 +87,15 @@ lineages <- lineages[pull]
 max_age <- max_age[pull]
 min_age <- min_age[pull]
 # make sure all are within parent
-pull <- sapply(lineages, function(x) parent %in% x)
+pull <- sapply(lineages, function(x) ifelse(parent == 'Catarrhini',
+                                            'Primates', parent) %in% x)
 binomials <- binomials[pull]
 lineages <- lineages[pull]
 max_age <- max_age[pull]
 min_age <- min_age[pull]
 rm(records.obj)
 rm(records)
-cat('Done. Discovered [', length(binomials), '] records.')
+cat('Done. Discovered [', length(binomials), '] records.', sep = '')
 
 # FOSSIL STATS
 cat('Determining fossil stats....\n')

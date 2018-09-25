@@ -34,8 +34,7 @@ p2 <- ggplot(mdl_data, aes(x=t0, y=t1, colour=epoch)) +
 text_tt <- theme(text=element_text(size=6))
 tiff(file.path('4_model', 'gam_and_points.tiff'), width=14, height=9, units="cm",
      res=1200)
-grid.arrange (p1+text_tt,
-              p2+text_tt, ncol=2)
+grid.arrange (p1+text_tt, p2+text_tt, ncol=2)
 dev.off()
 p1 <- ggplot(rnd_data, aes(x=t0, y=t1, colour=epoch)) +
   geom_point(alpha=0.05) + theme_bw() +
@@ -65,7 +64,6 @@ p_data <- data.frame(cnt=c(mdl_data$cnt, rnd_data$cnt),
 ggplot(p_data, aes(cnt, colour=real, fill=real)) + geom_density(alpha=0.5)
 # mean number of species in t0 by epoch
 tapply(mdl_data$n, mdl_data$epoch, mean)
-
 
 # SORT DATA
 # add tax info to rnd
