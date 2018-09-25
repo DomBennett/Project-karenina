@@ -14,6 +14,7 @@
 3_wrngl/
 4_model/
 *cache*
+*log*
 
 # mac
 .DS_Store
