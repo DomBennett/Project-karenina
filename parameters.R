@@ -5,11 +5,11 @@
 treefile <- 'hominoidea.tre'  # name of tree file in 0_data/
 parent <- "Hominoidea"  # name of parent clade for species in tree, remember capital!
 # possibles: Hominoidea, Catarrhini, Mammalia
-iterations <- 1:5  # number of pinned trees as vector
+iterations <- 1:100  # number of pinned trees as vector
 overwrite <- FALSE  # overwrite download files
-time_cuts <- c (0, 1.29985, 3.9605, 14.1815, 28.465, 44.95,
-                61, 83.25, 122.75, 154.25, 168.8, 187.7,
-                219.15, 242.1, 249.7, 256, 266.05, 285.6)
+time_cuts <- c(0, 1.29985, 3.9605, 14.1815, 28.465, 44.95,
+               61, 83.25, 122.75, 154.25, 168.8, 187.7,
+               219.15, 242.1, 249.7, 256, 266.05, 285.6)
 # ages to cut tree (here using middle epoch values as
 # these are the units of sampling in the pdbd)
 ncpus <- 2  # make 1 if no parallisation (UNIX-only)

@@ -5,60 +5,59 @@
 # TIMESTAMP
 cat(paste0('\nPinning started at [', Sys.time(), ']'))
 
+# LIBS
+library(treeman)
+pinParallel <- assembleRecords <- NULL
+source(file.path('tools', 'pin_tools.R'))
+
 # PARAMETERS
+overwrite <- parent <- treefile <- NULL
 source('parameters.R')
 
 # DIRS
 input.dir <- '0_data'
 output.dir <- '1_pin'
-if(!file.exists(output.dir)) {
+if (!file.exists(output.dir)) {
   dir.create(output.dir)
 }
 
-# LIBS
-library(treeman)
-library(paleobioDB)
-source(file.path('tools', 'pin_tools.R'))
-
 # READ TREE
 cat('\nResearching tree ....')
-tree <- readTree(file.path(input.dir, treefile),
-                 wndmtrx=FALSE)
+tree <- readTree(file.path(input.dir, treefile), wndmtrx = FALSE)
 tree_age <- getAge(tree)
 tree_tips <- tree['tips']
-txnyms <- searchTxnyms(tree, cache=TRUE, parent=parent)
+txnyms <- searchTxnyms(tree, cache = TRUE, parent = parent)
 wtxnyms <- sum(!is.na(txnyms))
 # give parent ID to those with missing txnym
-for(i in which(is.na(txnyms))) {
+for (i in which(is.na(txnyms))) {
   nid <- names(txnyms)[i]
-  while(is.na(txnyms[[i]])) {
+  while (is.na(txnyms[[i]])) {
     nid <- getNdSlt(tree, 'prid', nid)
     txnyms[[i]] <- txnyms[[nid]]
   }
 }
 tree <- setTxnyms(tree, txnyms)
-cat('\nDone. [', wtxnyms, '/', tree['nall'],
-     '] nodes with taxonyms.', sep='')
+cat('\nDone. [', wtxnyms, '/', tree['nall'], '] nodes with taxonyms.', sep = '')
 
 # PALEODB
 cat('\nRetrieving records ....')
 fossilfile <- paste0(parent, '_records.csv')
-if(overwrite | !file.exists(file.path(output.dir, fossilfile))) {
+if (overwrite | !file.exists(file.path(output.dir, fossilfile))) {
   # get
   cat('\n.... searching PBDB')
-  records <-  pbdb_occurrences(limit='all',
-                                base_name=parent, vocab="pbdb",
-                                show=c("phylo", "ident"))
+  records <- paleobioDB::pbdb_occurrences(limit = 'all', base_name = parent,
+                                          vocab = "pbdb",
+                                          show = c("phylo", "ident"))
   # write out
-  write.csv(records, file=file.path(output.dir, fossilfile),
-             row.names=FALSE)
+  write.csv(records, file = file.path(output.dir, fossilfile),
+             row.names = FALSE)
   # ensure factors are characters
   i <- sapply(records, is.factor)
   records[i] <- lapply(records[i], as.character)
 } else {
   cat('\n.... pre-loading file')
-  records <- read.csv(file=file.path(output.dir, fossilfile),
-                       stringsAsFactors=FALSE)
+  records <- read.csv(file = file.path(output.dir, fossilfile),
+                      stringsAsFactors = FALSE)
 }
 cat('\nDone.')
 
@@ -66,8 +65,10 @@ cat('\nDone.')
 cat('\nAssembling records for pinning ....')
 cat('.... [', nrow(records), '] records downloaded\n')
 # specify ranks in linages for pinning
-taxonomy <- c('phylum', 'class', 'order', 'family', 'genus_name', 'species_name')
-records.obj <- assembleRecords(records, taxonomy, .progress='time')
+taxonomy <- c('phylum', 'class', 'order', 'family', 'genus_name',
+              'species_name')
+records.obj <- assembleRecords(records, taxonomy, tree_tips = tree_tips,
+                               .progress = 'time')
 lineages <- records.obj[['lineages']]
 max_age <- records.obj[['max.age']]
 min_age <- records.obj[['min.age']]
@@ -99,12 +100,12 @@ cat('Done. Discovered [', length(binomials), '] records.')
 cat('Determining fossil stats....\n')
 fmls <- sapply(lineages, function(x) x[[3]])
 nfmls <- length(unique(fmls))
-cat('.... [', nfmls, '] families\n', sep='')
+cat('.... [', nfmls, '] families\n', sep = '')
 gnra <- sapply(lineages, function(x) x[[length(x)]])
 ngnra <- length(unique(gnra))
-cat('.... [', ngnra, '] genera\n', sep='')
+cat('.... [', ngnra, '] genera\n', sep = '')
 mdpnts <- ((max_age - min_age)/2) + min_age
-#hist(mdpnts, main='', xlab='Fossil midpoint (MYA)')
+#hist(mdpnts, main = '', xlab = 'Fossil midpoint (MYA)')
 cat('.... fossil midpoints:\t')
 print(quantile(mdpnts))
 cat('Done.\n')
@@ -113,14 +114,14 @@ cat('Done.\n')
 cat('\nPinning ....')
 cat('\n.... real')
 pinfolder <- file.path(output.dir, paste0(parent, '_real'))
-pinParallel(tree, tids=binomials, lngs=lineages, min_ages=min_age,
-            max_ages=max_age, pinfolder=pinfolder)
+pinParallel(tree, tids = binomials, lngs = lineages, min_ages = min_age,
+            max_ages = max_age, pinfolder = pinfolder, tree_age = tree_age)
 cat('\n.... random')
 randis <- sample(1:length(lineages))
 pinfolder <- file.path(output.dir, paste0(parent, '_rndm'))
-pinParallel(tree, tids=binomials, lngs=sample(lineages),
-            min_ages=min_age[randis], max_ages=max_age[randis],
-            pinfolder=pinfolder)
+pinParallel(tree, tids = binomials, lngs = sample(lineages),
+            min_ages = min_age[randis], max_ages = max_age[randis],
+            pinfolder = pinfolder, tree_age = tree_age)
 cat('\nDone.')
 
 # TIMESTAMP
