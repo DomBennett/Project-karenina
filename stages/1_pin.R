@@ -6,8 +6,10 @@
 cat(paste0('\nPinning started at [', Sys.time(), ']'))
 
 # LIBS
+library(foreach)
+library(doMC)
 library(treeman)
-pinParallel <- assembleRecords <- NULL
+pinParallelRand <- pinParallel <- assembleRecords <- NULL
 source(file.path('tools', 'pin_tools.R'))
 
 # PARAMETERS
@@ -113,16 +115,16 @@ cat('Done.\n')
 
 # PIN
 cat('\nPinning ....')
+registerDoMC(ncpus)
 cat('\n.... real')
 pinfolder <- file.path(output.dir, paste0(parent, '_real'))
-pinParallel(tree, tids = binomials, lngs = lineages, min_ages = min_age,
-            max_ages = max_age, pinfolder = pinfolder, tree_age = tree_age)
+ntips <- pinParallel(tree, tids = binomials, lngs = lineages,
+                     min_ages = min_age, max_ages = max_age,
+                     pinfolder = pinfolder, tree_age = tree_age)
 cat('\n.... random')
-randis <- sample(1:length(lineages))
 pinfolder <- file.path(output.dir, paste0(parent, '_rndm'))
-pinParallel(tree, tids = binomials, lngs = sample(lineages),
-            min_ages = min_age[randis], max_ages = max_age[randis],
-            pinfolder = pinfolder, tree_age = tree_age)
+ntips <- pinParallelRand(tree, tids = binomials, pinfolder = pinfolder,
+                         min_ages = min_age, tree_age = tree_age)
 cat('\nDone.')
 
 # TIMESTAMP
