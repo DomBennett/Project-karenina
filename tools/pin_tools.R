@@ -1,5 +1,6 @@
 # Sourced parameters
 ncpus <- time_cuts <- overwrite <- iterations <- parent <- treefile <- NULL
+source(file.path('tools', 'pin_tips.R'))
 
 # PIN TOOLS
 assembleRecords <- function(records, taxonomy, tree_tips, ...) {
@@ -41,10 +42,10 @@ pinParallel <- function(tree, tids, lngs, min_ages, max_ages, pinfolder,
     dir.create(pinfolder)
   }
   if (ncpus < 2) {
-    end_ages <- sapply(1:length(tids), function(x){
-      runif(1, min = min_ages[x], max = max_ages[x])
-    })
-    tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
+    # end_ages <- sapply(1:length(tids), function(x){
+    #   runif(1, min = min_ages[x], max = max_ages[x])
+    # })
+    tree <- pinTips2(tree, tids, lngs, min_ages, tree_age)
     save(tree, file = file.path(pinfolder, '1.RData'))
     return(NULL)
   }
@@ -64,14 +65,14 @@ pinParallel <- function(tree, tids, lngs, min_ages, max_ages, pinfolder,
   i <- NULL
   res <- foreach(i = 1:length(iterations)) %dopar% {
     cat('\n........ [', iterations[i], ']', sep = '')
-    end_ages <- sapply(1:length(tids), function(x){
-      runif(1, min = min_ages[x], max = max_ages[x])
-    })
+    # end_ages <- sapply(1:length(tids), function(x){
+    #   runif(1, min = min_ages[x], max = max_ages[x])
+    # })
     # not necessarily efficient to run in parallel
     # http://stackoverflow.com/questions/22104858/is-it-a-good-idea-to-read-write-files-in-parallel
     # .... but better to save progress
     # re-jig order in case it impacts pinning
-    tree <- pinTips(tree, tids, lngs, end_ages, tree_age)
+    tree <- pinTips2(tree, tids, lngs, min_ages, tree_age)
     save(tree, file = outfiles[i])
   }
   invisible(res)
