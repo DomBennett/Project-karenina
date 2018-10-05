@@ -78,7 +78,7 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
   rm(tmp_spn_data)
   for (i in seq_along(tids)) {
     tid <- tids[[i]]
-    end_age <- min_ages[[i]]
+    end_age <- end_ages[[i]]
     pull <- unname(which(spn_data[ ,'start'] > end_age))
     probs <- unname(spn_data[pull, 'start'] - spn_data[pull, 'end'])
     randi <- sample(pull, 1, prob = probs/max(probs))
@@ -117,7 +117,7 @@ pinParallelRand <- function(tree, tids, pinfolder, min_ages, tree_age) {
   }
   ntips <- foreach(i = 1:length(iterations)) %dopar% {
     cat('\n........ [', iterations[i], ']', sep = '')
-    tree <- pinTips_rand(tree, tids, end_ages, tree_age)
+    tree <- pinTips_rand(tree, tids, min_ages, tree_age)
     save(tree, file = outfiles[i])
     tree@ntips
   }
