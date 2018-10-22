@@ -77,6 +77,7 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
   spn_data[tree@all, "end"] <- tmp_spn_data[["end"]]
   rm(tmp_spn_data)
   for (i in seq_along(tids)) {
+    print(i)
     tid <- tids[[i]]
     end_age <- end_ages[[i]]
     pull <- unname(which(spn_data[ ,'start'] > end_age))
@@ -89,8 +90,16 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
     } else {
       strt_age <- runif(1, pssbl_ages[['end']], pssbl_ages[['start']])
     }
-    tree <- addTip(tree = tree, tid = tid, sid = sid, strt_age = strt_age,
-                   end_age = end_age, tree_age = tree_age)
+    success <- tryCatch(expr = {
+      tree <- addTip(tree = tree, tid = tid, sid = sid, strt_age = strt_age,
+                     end_age = end_age, tree_age = tree_age)
+      TRUE
+    } error = function(e) {
+      FALSE
+    })
+    if (!success) {
+      next
+    }
     # update spn_data with new info
     pid <- paste0("p_", tid, sep = "")
     tid_spn <- getSpnAge(tree, tid, tree_age)
