@@ -94,7 +94,7 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
       tree <- addTip(tree = tree, tid = tid, sid = sid, strt_age = strt_age,
                      end_age = end_age, tree_age = tree_age)
       TRUE
-    } error = function(e) {
+    }, error = function(e) {
       FALSE
     })
     if (!success) {
