@@ -77,7 +77,6 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
   spn_data[tree@all, "end"] <- tmp_spn_data[["end"]]
   rm(tmp_spn_data)
   for (i in seq_along(tids)) {
-    print(i)
     tid <- tids[[i]]
     end_age <- end_ages[[i]]
     pull <- unname(which(spn_data[ ,'start'] > end_age))
