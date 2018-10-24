@@ -114,6 +114,9 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
 }
 
 pinParallelRand <- function(tree, tids, pinfolder, min_ages, tree_age) {
+  if (!file.exists(pinfolder)) {
+    dir.create(pinfolder)
+  }
   outfiles <- file.path(pinfolder, paste0(iterations, '.RData'))
   if (!overwrite) {
     iterations <- iterations[!file.exists(outfiles)]
