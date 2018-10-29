@@ -111,6 +111,7 @@ pinTips_rand <- function(tree, tids, end_ages, tree_age) {
     spn_data[sid, "start"] <- sid_spn[, "start"]
     spn_data[sid, "end"] <- sid_spn[, "end"]
   }
+  tree
 }
 
 pinParallelRand <- function(tree, tids, pinfolder, min_ages, tree_age) {
