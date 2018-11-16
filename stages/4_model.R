@@ -20,7 +20,7 @@ if (!file.exists(output_dir)) {
 # INPUT
 load(file=file.path(input_dir, paste0(parent, '.RData')))
 
-# QUICK LOOK
+# QUICK LOOK ----
 p1 <- ggplot(mdl_data, aes(x=t0, y=t1, colour=epoch)) +
   geom_point(alpha=0.05) + theme_bw() +
   xlab(expression('ED'['t0'])) +
@@ -49,8 +49,7 @@ p2 <- ggplot(rnd_data, aes(x=t0, y=t1, colour=epoch)) +
 text_tt <- theme(text=element_text(size=6))
 tiff(file.path('4_model', 'gam_and_points_rand.tiff'), width=14, height=9, units="cm",
      res=1200)
-grid.arrange (p1+text_tt,
-              p2+text_tt, ncol=2)
+grid.arrange (p1+text_tt, p2+text_tt, ncol=2)
 dev.off()
 
 # BASIC STATS
@@ -95,7 +94,7 @@ plot(genus_data$t0_dummy, genus_data$t0)
 # clean up
 rm(order_data)
 
-# ASSESS WHETHER RND AND REAL DIFFER
+# ASSESS WHETHER RND AND REAL DIFFER ----
 tree_ids <- mdl_data$id[!as.logical(mdl_data$fssl_nd)]
 all_data <- data.frame(ids=c(mdl_data$id, rnd_data$id),
                        t0=c(mdl_data$t0, rnd_data$t0),
@@ -157,7 +156,7 @@ t.test(genus_data$tm[as.logical(genus_data$fssl_nd)],
 # yes, presumably because fossil nodes went extinct, while ones in the tree survived
 
 
-# MODEL SELECTION
+# MODEL SELECTION ----
 # exp linear model
 m0 <- lm(t1~t0, data=genus_data)
 m1a <- lmer(t1~t0 + (1|epoch), data=genus_data, REML=FALSE)
@@ -191,11 +190,9 @@ m3c <- lmer(t1~poly(t0, 4) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALS
 anova(m3b, m3c)
 m3d <- lmer(t1~poly(t0, 5) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
 anova(m3c, m3d)
-m3e <- lmer(t1~poly(t0, 6) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
-anova(m3d, m3e)
 # opt for 3c
 obs_mdl <- m3c
-save(m3c, file=file.path('4_model', 'obs_mdl.RData'))
+save(m3c, file = file.path('4_model', 'obs_mdl.RData'))
 
 # fitting exp ln
 n0a <- lm(t1~tm, data=genus_data)
@@ -283,10 +280,10 @@ sjp.lmer(obs_mdl, type = "fe")
 sjp.lmer(obs_mdl, type = "re.qq")
 
 
-# COMPARE REAL AND RANDOM POLY 3
+# COMPARE REAL AND RANDOM POLY 4
 # use (1|genus) because (t0|genus) is not computable in real time
-rndmdl <- lmer(t1~poly(t0, 3)+(t0|epoch)+(1|genus), data=rnd_data, REML=FALSE)
-rlmdl <- lmer(t1~poly(t0, 3)+(t0|epoch)+(1|genus), data=genus_data, REML=FALSE)
+rndmdl <- lmer(t1~poly(t0, 4)+(t0|epoch)+(1|genus), data=rnd_data, REML=FALSE)
+rlmdl <- lmer(t1~poly(t0, 4)+(t0|epoch)+(1|genus), data=genus_data, REML=FALSE)
 # create representative p_data
 t0 <- seq(min(rnd_data$t0), max(rnd_data$t0), length.out=100)
 rnd_rep <- rl_rep <- expand.grid(t0=t0, genus=sample(genus_data$genus, 100),

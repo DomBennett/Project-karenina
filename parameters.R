@@ -2,8 +2,8 @@
 # 27/07/2015
 # Set parameters
 
-treefile <- 'catarrhini.tre'  # name of tree file in 0_data/
-parent <- "Catarrhini"  # name of parent clade for species in tree, remember capital!
+treefile <- 'mammalia.tre'  # name of tree file in 0_data/
+parent <- "Mammalia"  # name of parent clade for species in tree, remember capital!
 # possibles: Hominoidea, Catarrhini, Mammalia
 iterations <- 1:100  # number of pinned trees as vector
 overwrite <- FALSE  # overwrite download files

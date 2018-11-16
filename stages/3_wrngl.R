@@ -85,8 +85,10 @@ orders <- c('Monotremata', 'Proboscidea', 'Sirenia', 'Tenrecidae',
             'Metatheria')
 tips <- tree['tips']
 genera <- unique(sub('_.*$', '', tips))
-res <- plyr::mdply(tree['all'], .fun = getOrdrAndGenera, .progress = 'time',
-                   tree = tree, orders = orders, genera)
+res <- lapply(tree['all'], getOrdrAndGenera, tree = tree, orders = orders,
+              genera = genera)
+res <- do.call(what = rbind, args = res)
+
 # add to data
 mtchng <- match(mdl_data[['id']], res[['nid']])
 mdl_data[['order']] <- res[mtchng, 'order']
