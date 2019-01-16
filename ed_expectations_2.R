@@ -101,6 +101,45 @@ edbmm_simulate <- function(ntips, b = 3, b_true = 1, d = 1, burnin = 10) {
   }
   tree
 }
+makeMdlData <- function(ed_files) {
+  ed_slice <- NULL
+  extrct <- function(j) {
+    t0 <- ed_slice[j, ]
+    t1 <- ed_slice[j + 1, ]
+    tmsplt <- paste0(rownames(ed_slice)[j:(j + 1)], collapse = '-')
+    age <- as.numeric(rownames(ed_slice)[j])
+    tmp <- data.frame(t0 = log(as.numeric(t0)), t1 = log(as.numeric(t1)),
+                      id = names(t0), cnt = 1, tmsplt = tmsplt, age = age,
+                      stringsAsFactors = FALSE)
+    tmp <- na.omit(tmp)
+    tmp[['n']] <- length(unique(tmp[['id']]))
+    tmp
+  }
+  t0t1s <- data.frame(t0 = NA, t1 = NA, tmsplt = NA, id = NA, cnt = NA, n = NA,
+                      age = NA)
+  for (ed_file in ed_files) {
+    i <- which(ed_files == ed_file)
+    cat('....[', i, '/', length(ed_files),
+        ']\n', sep = '')
+    if (!file.exists(ed_file)) {
+      next
+    }
+    load(ed_file)
+    tmp <- try(plyr::mdply(1:(nrow(ed_slice) - 1), extrct)[ ,-1], silent = TRUE)
+    if (inherits(tmp, 'try-error')) {
+      next
+    }
+    t0t1s <- rbind(t0t1s, tmp)
+    rm(ed_slice)
+  }
+  t0t1s <- t0t1s[-1, ]
+  t0t1s$ed <- (t0t1s$t0 + t0t1s$t1)/2
+  t0 <- t1 <- ed <- cnt <- n <- NULL
+  mdl_data <- plyr::ddply(t0t1s, c('id', 'tmsplt', 'age'), plyr::summarise,
+                          t0 = mean(t0), t1 = mean(t1), mean_ed = mean(ed),
+                          sd_ed = sd(ed), cnt = sum(cnt), n = mean(n))
+  mdl_data
+}
 
 # vars ----
 ncuts <- 10
@@ -141,13 +180,6 @@ for (i in 21:100) {
   }
 }
 ed_files <- list.files(path = bs_dir, pattern = '.RData')
-ed_files <- ed_files[-21]
-ed_files <- ed_files[-20]
-ed_files <- ed_files[-30]
-ed_files <- ed_files[-37]
-ed_files <- ed_files[-39]
-ed_files <- ed_files[-42]
-ed_files <- ed_files[1:40]
 bs_data <- makeMdlData(ed_files = file.path(bs_dir, ed_files))
 
 # birth-death ----

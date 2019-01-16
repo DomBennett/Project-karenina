@@ -64,7 +64,7 @@ ggplot(p_data, aes(cnt, colour=real, fill=real)) + geom_density(alpha=0.5)
 # mean number of species in t0 by epoch
 tapply(mdl_data$n, mdl_data$epoch, mean)
 
-# SORT DATA
+# SORT DATA ----
 # add tax info to rnd
 ints <- match(rnd_data$id, mdl_data$id)
 rnd_data$genus <- mdl_data$genus[ints]

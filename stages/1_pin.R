@@ -47,7 +47,7 @@ fossilfile <- paste0(parent, '_records.csv')
 if (overwrite | !file.exists(file.path(output.dir, fossilfile))) {
   # get
   cat('\n.... searching PBDB')
-  records <- paleobioDB::pbdb_occurrences(limit = 'all', base_name = parent,
+  records <- paleobioDB::pbdb_occurrences(limit = 'all', base_name = 'Aves',
                                           vocab = "pbdb",
                                           show = c("phylo", "ident"))
   # write out
