@@ -214,3 +214,6 @@ ggplot(all_data, aes(x = t0, y = t1)) +
   geom_smooth() +
   geom_abline(slope = 1) +
   facet_grid(~type) + theme(legend.position = 'none')
+
+ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
+  geom_smooth()
