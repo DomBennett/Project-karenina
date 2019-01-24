@@ -17,7 +17,7 @@ if (!file.exists(output_dir)) {
   dir.create(output_dir)
 }
 
-# INPUT
+# INPUT ----
 load(file=file.path(input_dir, paste0(parent, '.RData')))
 
 # QUICK LOOK ----
@@ -190,9 +190,13 @@ m3c <- lmer(t1~poly(t0, 4) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALS
 anova(m3b, m3c)
 m3d <- lmer(t1~poly(t0, 5) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
 anova(m3c, m3d)
-# opt for 3c
-obs_mdl <- m3c
-save(m3c, file = file.path('4_model', 'obs_mdl.RData'))
+m3e <- lmer(t1~poly(t0, 6) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3d, m3e)
+m3f <- lmer(t1~poly(t0, 7) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+anova(m3e, m3f)
+# opt for 3b
+obs_mdl <- m3b
+save(obs_mdl, file = file.path('4_model', 'obs_mdl.RData'))
 
 # fitting exp ln
 n0a <- lm(t1~tm, data=genus_data)
@@ -225,11 +229,11 @@ anova(n1h, n1g)
 exp_mdl <- n1g
 save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
 
-# OPTED MODELS
+# OPTED MODELS ----
 load(file.path('4_model', 'exp_mdl.RData'))
 load(file.path('4_model', 'obs_mdl.RData'))
 
-# PLOTTING
+# PLOTTING ----
 # create representative dataset of equal numbers epoch and sample genera
 t0 <- seq(min(genus_data$t0), max(genus_data$t0), length.out=100)
 rpsnttv <- expand.grid(t0=t0,
@@ -241,20 +245,56 @@ rpsnttv$n <- ns[rpsnttv$epoch]
 tm <- tapply(genus_data$tm, genus_data$epoch, mean)
 rpsnttv$tm <- tm[rpsnttv$epoch]
 rpsnttv$t0_dummy <- rpsnttv$t0/max(rpsnttv$t0)
+# https://www.rdocumentation.org/packages/lme4/versions/1.1-19/topics/bootMer
 rpsnttv$pfit <- predict(obs_mdl, rpsnttv)
 rpsnttv$nfit <- predict(exp_mdl, rpsnttv)
+rpsnttv$lfit <- predict(m2g, rpsnttv)
 # overall
 p_data <- plyr::ddply(rpsnttv, c('t0'), plyr::summarise,
-                      pfit=median(pfit), nfit=median(nfit))
-p <- ggplot(p_data, aes(x=t0, y=pfit)) + 
-  geom_line(aes(y=pfit), lwd=1) +
-  geom_line(aes(y=nfit), lwd=1, lty=2) +
+                      pmed = median(pfit),
+                      nmed = median(nfit),
+                      lmed = median(lfit),
+                      pupper = quantile(pfit, probs = .95),
+                      nupper = quantile(nfit, probs = .95),
+                      lupper = quantile(lfit, probs = .95),
+                      plower = quantile(pfit, probs = .05),
+                      nlower = quantile(nfit, probs = .05),
+                      llower = quantile(lfit, probs = .05))
+med_ed <- c(p_data$pmed, p_data$lmed, p_data$nmed)
+upper_ed <- c(p_data$pupper, p_data$lupper, p_data$nupper)
+lower_ed <- c(p_data$plower, p_data$llower, p_data$nlower)
+fitted_type <- c(rep('Polynomial', nrow(p_data)),
+                 rep('Linear', nrow(p_data)),
+                 rep('Expected', nrow(p_data)))
+poly_pdata <- data.frame(t0 = p_data$t0, type = 'Polynomial',
+                         med_ed = p_data$pmed, upper_ed = p_data$pupper,
+                         lower_ed = p_data$plower, expected_ed = p_data$nmed)
+line_pdata <- data.frame(t0 = p_data$t0, type = 'Linear',
+                         med_ed = p_data$lmed, upper_ed = p_data$lupper,
+                         lower_ed = p_data$llower, expected_ed = p_data$nmed)
+p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
+                            ymax = upper_ed)) + 
+  geom_line(lwd = 2) +
+  geom_ribbon(alpha = .1) +
+  geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
+            lty = 2) +
   xlab(expression('ED'['t0'])) +
   ylab(expression('ED'['t1'])) +
-  theme_bw()
+  theme_bw() + theme(legend.title = element_blank(),
+                     text = element_text(size = 18))
+p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
+                            ymax = upper_ed)) + 
+  geom_line(lwd = 2) +
+  geom_ribbon(alpha = .1) +
+  geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
+            lty = 2) +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme_bw() + theme(legend.title = element_blank(),
+                     text = element_text(size = 18))
 tiff(file.path('4_model', 'overall.tiff'), width=9, height=9, units="cm",
      res=1200)
-print(p)
+print(grid.arrange(p2, p1))
 dev.off()
 # by epoch
 p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
