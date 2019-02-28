@@ -63,6 +63,9 @@ p_data <- data.frame(cnt=c(mdl_data$cnt, rnd_data$cnt),
 ggplot(p_data, aes(cnt, colour=real, fill=real)) + geom_density(alpha=0.5)
 # mean number of species in t0 by epoch
 tapply(mdl_data$n, mdl_data$epoch, mean)
+# n data points per epoch
+data_per_epoch <- table(mdl_data$epoch)
+mean(data_per_epoch[!names(data_per_epoch) %in% c('CL-CU', 'JU-CL')])
 
 # SORT DATA ----
 # add tax info to rnd
@@ -117,6 +120,7 @@ ggplot(all_data[all_data$fssl_nd, ], aes(tdff, colour=real, fill=real)) +
 # F-test
 rl_tdffs <- all_data[all_data$real == 'Real', 'tdff']
 rnd_tdffs <- all_data[all_data$real == 'Random', 'tdff']
+t.test(rl_tdffs, rnd_tdffs)
 var.test(rnd_tdffs, rl_tdffs)
 var(rnd_tdffs, na.rm=TRUE)
 var(rl_tdffs, na.rm=TRUE)
@@ -225,6 +229,7 @@ n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(tm|genus), data=genus_data, REML=
 anova(n1e, n1g)
 n1h <- lmer(t1~t0_dummy+tm+n+(1|order/genus), data=genus_data, REML=FALSE)
 anova(n1h, n1g)
+AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h)
 # opt for n1g
 exp_mdl <- n1g
 save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
@@ -292,9 +297,13 @@ p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   ylab(expression('ED'['t1'])) +
   theme_bw() + theme(legend.title = element_blank(),
                      text = element_text(size = 18))
-tiff(file.path('4_model', 'overall.tiff'), width=9, height=9, units="cm",
+tiff(file.path('4_model', 'overall_linear.tiff'), width=9, height=9, units="cm",
      res=1200)
-print(grid.arrange(p2, p1))
+print(p2)
+dev.off()
+tiff(file.path('4_model', 'overall_poly.tiff'), width=9, height=9, units="cm",
+     res=1200)
+print(p1)
 dev.off()
 # by epoch
 p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
@@ -313,17 +322,19 @@ dev.off()
 
 
 # DIAGNOSTICS
-library(sjPlot)
-library(sjmisc)
-sjp.lmer(exp_mdl, type = "fe")
-sjp.lmer(obs_mdl, type = "fe")
-sjp.lmer(obs_mdl, type = "re.qq")
+# library(sjPlot)
+# library(sjmisc)
+# sjPlot::plot_model(exp_mdl, )
+# sjPlot::sjplot(exp_mdl)
+# sj(exp_mdl, type = "fe")
+# sjp.lmer(obs_mdl, type = "fe")
+# sjp.lmer(obs_mdl, type = "re.qq")
 
 
-# COMPARE REAL AND RANDOM POLY 4
+# COMPARE REAL AND RANDOM POLY 3
 # use (1|genus) because (t0|genus) is not computable in real time
-rndmdl <- lmer(t1~poly(t0, 4)+(t0|epoch)+(1|genus), data=rnd_data, REML=FALSE)
-rlmdl <- lmer(t1~poly(t0, 4)+(t0|epoch)+(1|genus), data=genus_data, REML=FALSE)
+rndmdl <- lmer(t1~poly(t0, 3)+(t0|epoch), data=rnd_data, REML=FALSE)
+rlmdl <- lmer(t1~poly(t0, 3)+(t0|epoch), data=genus_data, REML=FALSE)
 # create representative p_data
 t0 <- seq(min(rnd_data$t0), max(rnd_data$t0), length.out=100)
 rnd_rep <- rl_rep <- expand.grid(t0=t0, genus=sample(genus_data$genus, 100),
