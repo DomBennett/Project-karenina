@@ -241,11 +241,18 @@ n1f <- lmer(t1~t0_dummy+tm+n+(n|genus), data=genus_data, REML=FALSE)
 anova(n1b, n1d)
 anova(n1e, n1d)
 anova(n1f, n1e)
-n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(tm|genus), data=genus_data, REML=FALSE)
+n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(tm|genus), data=genus_data,
+            REML=FALSE)
 anova(n1e, n1g)
 n1h <- lmer(t1~t0_dummy+tm+n+(1|order/genus), data=genus_data, REML=FALSE)
 anova(n1h, n1g)
-AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h)
+n1i <- lmer(t1~t0_dummy+tm+n+(tm|order/genus), data=genus_data, REML=FALSE)
+anova(n1i, n1g)
+# optimisation error
+n1j <- lmer(t1~t0_dummy+tm+n+(t0_dummy|order/genus)+(tm|order/genus),
+            data=genus_data, REML=FALSE)
+anova(n1j, n1g)
+AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h, n1i, n1j)
 # opt for n1g
 exp_mdl <- n1g
 save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
@@ -294,9 +301,9 @@ poly_pdata <- data.frame(t0 = p_data$t0, type = 'Polynomial',
 line_pdata <- data.frame(t0 = p_data$t0, type = 'Linear',
                          med_ed = p_data$lmed, upper_ed = p_data$lupper,
                          lower_ed = p_data$llower, expected_ed = p_data$nmed)
-theme_settings <- theme_bw() + theme(legend.title = element_blank(),
-                                     text = element_text(size = 18),
-                                     title = element_text(size = 11))
+theme_settings <- theme_bw() +
+  theme(legend.title = element_blank(), text = element_text(size = 18),
+        title = element_text(size = 11))
 p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
                             ymax = upper_ed)) + 
   geom_line(lwd = 2) +
@@ -304,7 +311,7 @@ p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings
+  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.3)
 p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
                             ymax = upper_ed)) + 
   geom_line(lwd = 2) +
@@ -312,7 +319,7 @@ p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings
+  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.3)
 tiff(file.path('4_model', 'overall.tiff'), width=18, height=9, units="cm",
      res=1200)
 grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2g)')),
