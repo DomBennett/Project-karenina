@@ -57,10 +57,6 @@ nrow(mdl_data)
 quantile(mdl_data$cnt)
 nrow(rnd_data)
 quantile(rnd_data$cnt)
-p_data <- data.frame(cnt=c(mdl_data$cnt, rnd_data$cnt),
-                     real=c(rep('Real', nrow(mdl_data)),
-                            rep('Random', nrow(rnd_data))))
-ggplot(p_data, aes(cnt, colour=real, fill=real)) + geom_density(alpha=0.5)
 # mean number of species in t0 by epoch
 tapply(mdl_data$n, mdl_data$epoch, mean)
 # n data points per epoch
@@ -105,11 +101,14 @@ all_data <- data.frame(ids=c(mdl_data$id, rnd_data$id),
                        sd=c(mdl_data$sd_ed, rnd_data$sd_ed),
                        epoch=c(mdl_data$epoch, rnd_data$epoch),
                        real=c(rep('Real', nrow(mdl_data)),
-                              rep('Random', nrow(rnd_data))))
+                              rep('Random', nrow(rnd_data))),
+                       cnt=c(mdl_data$cnt, rnd_data$cnt))
 all_data$fssl_nd <- !all_data$ids %in% tree_ids
 all_data$tdff <- all_data$t0 - all_data$t1
-xlbl <- expression(paste('ED'['t0'], ' - ED'['t1']))
+# mean diffs
+tapply(X = all_data$tdff, INDEX = all_data$real, FUN = mean)
 # tdff
+xlbl <- expression(paste('ED'['t0'], ' - ED'['t1']))
 p1 <- ggplot(all_data, aes(tdff, colour=real, fill=real)) +
   geom_density(alpha=0.5) + theme_bw() + xlab(xlbl) + ylab('') +
   theme(legend.position='none')
@@ -120,25 +119,40 @@ ggplot(all_data[all_data$fssl_nd, ], aes(tdff, colour=real, fill=real)) +
 # F-test
 rl_tdffs <- all_data[all_data$real == 'Real', 'tdff']
 rnd_tdffs <- all_data[all_data$real == 'Random', 'tdff']
-t.test(rl_tdffs, rnd_tdffs)
+t.test(rnd_tdffs, rl_tdffs)
 var.test(rnd_tdffs, rl_tdffs)
 var(rnd_tdffs, na.rm=TRUE)
 var(rl_tdffs, na.rm=TRUE)
+# cnt
+p2 <- ggplot(all_data, aes(cnt, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab('No. occurrences across iterations') + ylab('') +
+  theme(legend.position='none')
 # check SD
-p2 <- ggplot(all_data[all_data$fssl_nd, ], aes(sd, colour=real, fill=real)) +
+p3 <- ggplot(all_data[all_data$fssl_nd, ], aes(sd, colour=real, fill=real)) +
   geom_density(alpha=0.5) + theme_bw() + xlab('Std. Dv. of ED') + ylab('') +
+  theme(legend.position='none')
+ggplot(all_data, aes(sd, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + xlab('Std. Dv. of ED of shared nodes') + ylab('') +
   theme(legend.title = element_blank())
-# F-test
+# SD of Shared Nodes
 rl_sds <- all_data[all_data$real == 'Real' & all_data$fssl_nd, 'sd']
 rnd_sds <- all_data[all_data$real == 'Random' & all_data$fssl_nd, 'sd']
 t.test(rnd_sds, rl_sds)
 mean(rnd_sds, na.rm=TRUE)
 mean(rl_sds, na.rm=TRUE)
+sum(!is.na(rnd_sds))
+sum(!is.na(rl_sds))
 # save plots
 text_tt <- theme(text=element_text(size=6))
-tiff(file.path('4_model', 'diff_rand_real.tiff'), width=14, height=9, units="cm",
+# get legend
+p_null <- ggplot(all_data, aes(cnt, colour=real, fill=real)) +
+  geom_density(alpha=0.5) + theme_bw() + theme(legend.title = element_blank())
+tmp <- ggplot_gtable(ggplot_build(p_null)) 
+leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
+legend <- tmp$grobs[[leg]]
+tiff(file.path('4_model', 'diff_rand_real.tiff'), width=14, height=14, units="cm",
      res=1200)
-grid.arrange(p1+text_tt, p2+text_tt, ncol=2)
+grid.arrange(p1+text_tt, p2+text_tt, p3+text_tt, legend, ncol=2)
 dev.off()
 
 # CHECK PINNING/FOSSILS
@@ -184,6 +198,8 @@ anova(m2c, m2f)
 anova(m2c, m2g)
 anova(m2g, m2h)
 # m2g is best
+obs_mdl_1 <- m2g
+save(obs_mdl_1, file = file.path('4_model', 'obs_mdl_1.RData'))
 
 # fitting polynomials
 m3a <- lmer(t1~poly(t0, 2) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
@@ -199,8 +215,8 @@ anova(m3d, m3e)
 m3f <- lmer(t1~poly(t0, 7) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
 anova(m3e, m3f)
 # opt for 3b
-obs_mdl <- m3b
-save(obs_mdl, file = file.path('4_model', 'obs_mdl.RData'))
+obs_mdl_2 <- m3b
+save(obs_mdl_2, file = file.path('4_model', 'obs_mdl_2.RData'))
 
 # fitting exp ln
 n0a <- lm(t1~tm, data=genus_data)
@@ -236,7 +252,8 @@ save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
 
 # OPTED MODELS ----
 load(file.path('4_model', 'exp_mdl.RData'))
-load(file.path('4_model', 'obs_mdl.RData'))
+load(file.path('4_model', 'obs_mdl_1.RData'))
+load(file.path('4_model', 'obs_mdl_2.RData'))
 
 # PLOTTING ----
 # create representative dataset of equal numbers epoch and sample genera
@@ -251,9 +268,9 @@ tm <- tapply(genus_data$tm, genus_data$epoch, mean)
 rpsnttv$tm <- tm[rpsnttv$epoch]
 rpsnttv$t0_dummy <- rpsnttv$t0/max(rpsnttv$t0)
 # https://www.rdocumentation.org/packages/lme4/versions/1.1-19/topics/bootMer
-rpsnttv$pfit <- predict(obs_mdl, rpsnttv)
+rpsnttv$pfit <- predict(obs_mdl_2, rpsnttv)
 rpsnttv$nfit <- predict(exp_mdl, rpsnttv)
-rpsnttv$lfit <- predict(m2g, rpsnttv)
+rpsnttv$lfit <- predict(obs_mdl_1, rpsnttv)
 # overall
 p_data <- plyr::ddply(rpsnttv, c('t0'), plyr::summarise,
                       pmed = median(pfit),
@@ -277,6 +294,9 @@ poly_pdata <- data.frame(t0 = p_data$t0, type = 'Polynomial',
 line_pdata <- data.frame(t0 = p_data$t0, type = 'Linear',
                          med_ed = p_data$lmed, upper_ed = p_data$lupper,
                          lower_ed = p_data$llower, expected_ed = p_data$nmed)
+theme_settings <- theme_bw() + theme(legend.title = element_blank(),
+                                     text = element_text(size = 18),
+                                     title = element_text(size = 11))
 p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
                             ymax = upper_ed)) + 
   geom_line(lwd = 2) +
@@ -284,9 +304,7 @@ p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) +
-  theme_bw() + theme(legend.title = element_blank(),
-                     text = element_text(size = 18))
+  ylab(expression('ED'['t1'])) + theme_settings
 p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
                             ymax = upper_ed)) + 
   geom_line(lwd = 2) +
@@ -294,16 +312,12 @@ p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) +
-  theme_bw() + theme(legend.title = element_blank(),
-                     text = element_text(size = 18))
-tiff(file.path('4_model', 'overall_linear.tiff'), width=9, height=9, units="cm",
+  ylab(expression('ED'['t1'])) + theme_settings
+tiff(file.path('4_model', 'overall.tiff'), width=18, height=9, units="cm",
      res=1200)
-print(p2)
-dev.off()
-tiff(file.path('4_model', 'overall_poly.tiff'), width=9, height=9, units="cm",
-     res=1200)
-print(p1)
+grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2g)')),
+             p1 + ggtitle(label = 'Best observed nonlinear (m3b)') + ylab(''),
+             nrow = 1, ncol = 2)
 dev.off()
 # by epoch
 p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
@@ -353,6 +367,20 @@ p <- ggplot(p_data, aes(x=t0, y=fit, colour=real)) +
   ylab(expression('ED'['t1'])) +
   theme_bw() + theme(legend.title=element_blank())
 tiff(file.path('4_model', 'real_rndm_p3.tiff'), width=9, height=9, units="cm",
+     res=1200)
+print(p + theme(text=element_text(size=6)))
+dev.off()
+
+# PLOTTING CONFIDENT POINTS
+mdl_data$c50 <- '< 50'
+mdl_data$c50[mdl_data$cnt > 50] <- '> 50'
+mdl_data$c50[mdl_data$cnt < 50] <- '< 50'
+p <- ggplot(mdl_data, aes(x=t0, y=t1, colour=c50)) +
+  geom_smooth(se=TRUE, formula=y~x) + theme_bw() +
+  xlab(expression('ED'['t0'])) +
+  ylab(expression('ED'['t1'])) +
+  theme(legend.title=element_blank())
+tiff(file.path('4_model', 'confident_vs_unconfident.tiff'), width=9, height=9, units="cm",
      res=1200)
 print(p + theme(text=element_text(size=6)))
 dev.off()
