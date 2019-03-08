@@ -86,7 +86,7 @@ genus_data$tm <- log(genus_data$tm)
 # bins <- seq(min(genus_data$t0)-0.00001, max(genus_data$t0), length.out=5)
 # genus_data$t0_dummy <- as.numeric(cut(genus_data$t0, bins))
 # genus_data$t0_dummy <- as.numeric(genus_data$t0 > mean(genus_data$t0))
-genus_data$t0_dummy <- round(genus_data$t0)
+genus_data$t0_dummy <- round(x = genus_data$t0, digits = 0)
 genus_data$t0_dummy <- genus_data$t0_dummy/max(genus_data$t0_dummy)
 hist(genus_data$t0_dummy)
 plot(genus_data$t0_dummy, genus_data$t0)
@@ -175,7 +175,7 @@ t.test(genus_data$tm[as.logical(genus_data$fssl_nd)],
 
 
 # MODEL SELECTION ----
-# exp linear model
+# obs linear model
 m0 <- lm(t1~t0, data=genus_data)
 m1a <- lmer(t1~t0 + (1|epoch), data=genus_data, REML=FALSE)
 m1b <- lmer(t1~t0 + (t0|epoch), data=genus_data, REML=FALSE)
@@ -187,6 +187,7 @@ m2e <- lmer(t1~t0 + (t0|epoch) + (1|order/id), data=genus_data, REML=FALSE)
 m2f <- lmer(t1~t0 + (t0|epoch) + (t0|order), data=genus_data, REML=FALSE)
 m2g <- lmer(t1~t0 + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
 m2h <- lmer(t1~t0 + (t0|epoch) + (t0|id), data=genus_data, REML=FALSE)
+m2i <- lmer(t1~t0 + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 AIC(m0)
 anova(m1a, m1b)
 anova(m1b, m2a)
@@ -197,23 +198,34 @@ anova(m2c, m2e)
 anova(m2c, m2f)
 anova(m2c, m2g)
 anova(m2g, m2h)
+anova(m2g, m2i)
+AIC(m2g, m2i)
 # m2g is best
-obs_mdl_1 <- m2g
+obs_mdl_1 <- m2i
 save(obs_mdl_1, file = file.path('4_model', 'obs_mdl_1.RData'))
 
 # fitting polynomials
-m3a <- lmer(t1~poly(t0, 2) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
-anova(m2g, m3a)
-m3b <- lmer(t1~poly(t0, 3) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m3a <- lmer(t1~poly(t0, 2) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
+anova(obs_mdl_1, m3a)
+m3b <- lmer(t1~poly(t0, 3) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 anova(m3a, m3b)
-m3c <- lmer(t1~poly(t0, 4) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m3c <- lmer(t1~poly(t0, 4) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 anova(m3b, m3c)
-m3d <- lmer(t1~poly(t0, 5) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m3d <- lmer(t1~poly(t0, 5) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 anova(m3c, m3d)
-m3e <- lmer(t1~poly(t0, 6) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m3e <- lmer(t1~poly(t0, 6) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 anova(m3d, m3e)
-m3f <- lmer(t1~poly(t0, 7) + (t0|epoch) + (t0|genus), data=genus_data, REML=FALSE)
+m3f <- lmer(t1~poly(t0, 7) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
 anova(m3e, m3f)
+# too little improvement, too complex
+# m3g <- lmer(t1~poly(t0, 8) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
+# anova(m3e, m3g)
+# m3h <- lmer(t1~poly(t0, 9) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
+# anova(m3g, m3h)
+# m3i <- lmer(t1~poly(t0, 10) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
+# anova(m3h, m3i)
+# m3j <- lmer(t1~poly(t0, 11) + (t0|epoch) + (t0|order/genus), data=genus_data, REML=FALSE)
+# anova(m3i, m3j)
 # opt for 3b
 obs_mdl_2 <- m3b
 save(obs_mdl_2, file = file.path('4_model', 'obs_mdl_2.RData'))
@@ -249,7 +261,7 @@ anova(n1h, n1g)
 n1i <- lmer(t1~t0_dummy+tm+n+(tm|order/genus), data=genus_data, REML=FALSE)
 anova(n1i, n1g)
 # optimisation error
-n1j <- lmer(t1~t0_dummy+tm+n+(t0_dummy|order/genus)+(tm|order/genus),
+n1j <- lmer(t1~t0_dummy+tm+n+(t0_dummy|order/genus)+(tm|genus),
             data=genus_data, REML=FALSE)
 anova(n1j, n1g)
 AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h, n1i, n1j)
@@ -311,7 +323,7 @@ p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.3)
+  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.4)
 p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
                             ymax = upper_ed)) + 
   geom_line(lwd = 2) +
@@ -319,10 +331,10 @@ p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
   geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
             lty = 2) +
   xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.3)
+  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.4)
 tiff(file.path('4_model', 'overall.tiff'), width=18, height=9, units="cm",
      res=1200)
-grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2g)')),
+grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2i)')),
              p1 + ggtitle(label = 'Best observed nonlinear (m3b)') + ylab(''),
              nrow = 1, ncol = 2)
 dev.off()
