@@ -65,9 +65,9 @@ slice_and_save <- function(tree, i, flpth) {
   ids <- tree@all
   new_ids <- paste0(i, '_', ids)
   tree <- setNdsID(tree, ids = ids, vals = new_ids)
-  # slice
-  intrvls <- 1/ncuts
-  time_cuts <- seq(intrvls, 1 - intrvls, intrvls)
+  # slice, only consider second half of tree to ignore burnin
+  intrvls <- 0.5/ncuts
+  time_cuts <- seq(0.5, 1 - intrvls, intrvls)
   ed_slice <- calcEDBySlice(tree, time_cuts)
   # save
   save(ed_slice, file = file.path(flpth, paste0(i, '.RData')))
