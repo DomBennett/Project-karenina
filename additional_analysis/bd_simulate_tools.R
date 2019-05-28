@@ -67,13 +67,14 @@ slice_and_save <- function(tree, i, flpth) {
   tree <- setNdsID(tree, ids = ids, vals = new_ids)
   # slice, only consider second half of tree to ignore burnin
   intrvls <- 0.5/ncuts
-  time_cuts <- seq(0.5, 1 - intrvls, intrvls)
+  time_cuts <- seq(intrvls, 0.5, intrvls)
   ed_slice <- calcEDBySlice(tree, time_cuts)
   # save
   save(ed_slice, file = file.path(flpth, paste0(i, '.RData')))
 }
 
-iterate <- function(type, flpth, overwrite = FALSE) {
+tree_simulate <- function(type, flpth, overwrite = FALSE) {
+  flpth <- folder_gen(file.path(flpth, 'trees'))
   itrns <- seq_len(niterations)
   if (overwrite) {
     itrns <- itrns
@@ -86,12 +87,22 @@ iterate <- function(type, flpth, overwrite = FALSE) {
   foreach(i = itrns) %dopar% {
     print(i)
     tree <- bd_simulate(ntips = ntips, type = type)
-    slice_and_save(tree = tree, i = i, flpth = flpth)
+    saveRDS(object = tree, file = file.path(flpth, paste0(i, '.RData')))
     invisible(NULL)
   }
 }
 
-makeMdlData <- function(ed_files) {
+slice <- function(flpth) {
+  tree_files <- list.files(path = file.path(flpth, 'trees'), pattern = '.RData')
+  for (i in seq_along(tree_files)) {
+    tree <- readRDS(file = file.path(file.path(flpth, 'trees'),
+                                     tree_files[[i]]))
+    slice_and_save(tree = tree, i = i, flpth = file.path(flpth, 'slices'))
+  }
+}
+
+makeMdlData <- function(flpth) {
+  ed_files <- list.files(path = file.path(flpth, 'slices'), pattern = '.RData')
   ed_slice <- NULL
   extrct <- function(j) {
     t0 <- ed_slice[j, ]

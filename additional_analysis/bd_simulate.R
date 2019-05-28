@@ -8,9 +8,9 @@ source(file.path('additional_analysis', 'bd_simulate_tools.R'))
 
 # Vars ----
 ncuts <- 5
-niterations <- 2
+niterations <- 10
 ntips <- 1000
-ncpus <- 2
+ncpus <- 4
 
 # Dirs ----
 outdir <- 'additional_analysis'
@@ -22,27 +22,25 @@ pf_dir <- folder_gen(file.path(outdir, 'pf'))
 # Simulate ----
 registerDoMC(ncpus)
 cat('...bd\n')
-iterate(type = 'bd', flpth = bd_dir, overwrite = FALSE)
+tree_simulate(type = 'bd', flpth = bd_dir, overwrite = FALSE)
 cat('...pan\n')
-iterate(type = 'pan', flpth = pan_dir, overwrite = FALSE)
+tree_simulate(type = 'pan', flpth = pan_dir, overwrite = FALSE)
 cat('...de\n')
-iterate(type = 'de', flpth = de_dir, overwrite = FALSE)
+tree_simulate(type = 'de', flpth = de_dir, overwrite = FALSE)
 cat('...pf\n')
-iterate(type = 'pf', flpth = pf_dir, overwrite = FALSE)
+tree_simulate(type = 'pf', flpth = pf_dir, overwrite = FALSE)
+
+# Slice ----
+slice(flpth = bd_dir)
+slice(flpth = pan_dir)
+slice(flpth = de_dir)
+slice(flpth = pf_dir)
 
 # Extract slices ----
-# bd
-ed_files <- list.files(path = bd_dir, pattern = '.RData')
-bd_data <- makeMdlData(ed_files = file.path(bd_dir, ed_files))
-# pan
-ed_files <- list.files(path = pan_dir, pattern = '.RData')
-pan_data <- makeMdlData(ed_files = file.path(pan_dir, ed_files))
-# de
-ed_files <- list.files(path = de_dir, pattern = '.RData')
-de_data <- makeMdlData(ed_files = file.path(de_dir, ed_files))
-# pf
-ed_files <- list.files(path = pf_dir, pattern = '.RData')
-pf_data <- makeMdlData(ed_files = file.path(pf_dir, ed_files))
+bd_data <- makeMdlData(flpth = bd_dir)
+pan_data <- makeMdlData(flpth = pan_dir)
+de_data <- makeMdlData(flpth = de_dir)
+pf_data <- makeMdlData(flpth = pf_dir)
 
 # Plot ----
 library(ggplot2)
@@ -62,5 +60,5 @@ ggplot(all_data, aes(x = t0, y = t1)) +
   facet_grid(~type) + theme(legend.position = 'none')
 # linear
 ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
-  geom_smooth(method = ) + geom_abline()
+  geom_smooth(method = 'loess') + geom_abline(slope = 1)
 
