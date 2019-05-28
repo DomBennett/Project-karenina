@@ -60,7 +60,7 @@ slice_and_save <- function(tree, i, flpth) {
   spns <- getNdsSlt(tree = tree, slt_nm = 'spn', ids = tree['all'])
   spns <- spns/getAge(tree)
   tree <- setNdsSpn(tree, ids = tree['all'], vals = spns)
-  print(getAge(tree))
+  # print(getAge(tree))
   # unique IDs
   ids <- tree@all
   new_ids <- paste0(i, '_', ids)
