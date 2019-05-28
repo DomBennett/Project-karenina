@@ -6,6 +6,7 @@
 # data files
 *.csv
 *.Rd
+*.RData
 *.tre
 *.pdf
 0_data/

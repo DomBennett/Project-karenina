@@ -22,10 +22,15 @@ pf_dir <- folder_gen(file.path(outdir, 'pf'))
 
 # Simulate ----
 registerDoMC(ncpus)
+cat('...bd\n')
 iterate(type = 'bd', flpth = bd_dir, overwrite = FALSE)
+cat('...pan\n')
 iterate(type = 'pan', flpth = pan_dir, overwrite = FALSE)
+cat('...eph\n')
 iterate(type = 'eph', flpth = eph_dir, overwrite = FALSE)
+cat('...de\n')
 iterate(type = 'de', flpth = de_dir, overwrite = FALSE)
+cat('...pf\n')
 iterate(type = 'pf', flpth = pf_dir, overwrite = FALSE)
 
 # Extract slices ----

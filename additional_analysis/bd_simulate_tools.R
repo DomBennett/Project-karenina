@@ -87,7 +87,7 @@ iterate <- function(type, flpth, overwrite = FALSE) {
     print(i)
     tree <- bd_simulate(ntips = ntips, type = type)
     slice_and_save(tree = tree, i = i, flpth = flpth)
-    NULL
+    invisible(NULL)
   }
 }
 
