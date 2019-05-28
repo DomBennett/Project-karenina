@@ -61,4 +61,3 @@ ggplot(all_data, aes(x = t0, y = t1)) +
 # linear
 ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
   geom_smooth(method = 'loess') + geom_abline(slope = 1)
-

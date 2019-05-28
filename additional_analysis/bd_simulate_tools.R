@@ -94,15 +94,17 @@ tree_simulate <- function(type, flpth, overwrite = FALSE) {
 
 slice <- function(flpth) {
   tree_files <- list.files(path = file.path(flpth, 'trees'), pattern = '.RData')
+  otpth <- folder_gen(file.path(flpth, 'slices'))
   for (i in seq_along(tree_files)) {
     tree <- readRDS(file = file.path(file.path(flpth, 'trees'),
                                      tree_files[[i]]))
-    slice_and_save(tree = tree, i = i, flpth = file.path(flpth, 'slices'))
+    slice_and_save(tree = tree, i = i, flpth = otpth)
   }
 }
 
 makeMdlData <- function(flpth) {
   ed_files <- list.files(path = file.path(flpth, 'slices'), pattern = '.RData')
+  ed_files <- file.path(flpth, 'slices', ed_files)
   ed_slice <- NULL
   extrct <- function(j) {
     t0 <- ed_slice[j, ]
@@ -120,8 +122,7 @@ makeMdlData <- function(flpth) {
                       age = NA)
   for (ed_file in ed_files) {
     i <- which(ed_files == ed_file)
-    cat('....[', i, '/', length(ed_files),
-        ']\n', sep = '')
+    cat('....[', i, '/', length(ed_files), ']\n', sep = '')
     if (!file.exists(ed_file)) {
       next
     }
