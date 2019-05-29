@@ -17,22 +17,37 @@ load(file = file.path('additional_analysis', 'sim_results.RData'))
 
 # All plot ----
 all_data <- rbind(bd_data, pan_data, de_data, pf_data)
-all_data$type <- c(rep('bd', nrow(bd_data)),
-                   rep('pan', nrow(pan_data)),
-                   rep('de', nrow(de_data)),
-                   rep('pf', nrow(pf_data)))
+all_data$type <- c(rep('Null', nrow(bd_data)),
+                   rep('Pan.', nrow(pan_data)),
+                   rep('Rel.', nrow(de_data)),
+                   rep('P.F.', nrow(pf_data)))
+# control level order
+all_data$type <- factor(all_data$type,
+                        levels = c("Null", "Pan.", "Rel.", 'P.F.'))
 all_data$id <- paste0(all_data$type, '_', all_data$id)
 # drop multiples
 #all_data <- all_data[duplicated(all_data$id), ]
 # individual
-ggplot(all_data, aes(x = t0, y = t1)) +
-  geom_point() +
-  geom_smooth() +
+p1 <- ggplot(all_data, aes(x = t0, y = t1)) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs"),
+              aes(colour = type), se = TRUE, level = 0.95) +
   geom_abline(slope = 1) +
-  facet_grid(~type) + theme(legend.position = 'none')
+  facet_wrap(~type, ncol = 2) +
+  theme_bw() +
+  scale_colour_ghibli_d("MarnieMedium1") +
+  theme(legend.position = 'none') +
+  xlab(expression('log(ED'['t0']~')')) +
+  ylab(expression('log(ED'['t1']~')'))
 # linear
-ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
-  geom_smooth() + geom_abline(slope = 1)
+p2 <- ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
+  geom_smooth() +
+  geom_abline(slope = 1)
+tiff(file.path('additional_analysis', 'simulations_points.tiff'), width = 18,
+     height = 18, units = "cm", res = 1200)
+print(p1 + theme(legend.title = element_blank(), text = element_text(size = 18),
+                 title = element_text(size = 11)))
+dev.off()
 
 # Linear model ---
 # bd
@@ -91,7 +106,7 @@ p <- ggplot(p_data, aes(x = t0, y = t1, ymin = t1_lower, ymax = t1_upper)) +
   scale_colour_ghibli_d("MarnieMedium1") + theme(legend.position = 'none') +
   xlab(expression('log(ED'['t0']~')')) +
   ylab(expression('log(ED'['t1']~')'))
-tiff(file.path('additional_analysis', 'simulations.tiff'), width = 18,
+tiff(file.path('additional_analysis', 'simulations_models.tiff'), width = 18,
      height = 18, units = "cm", res = 1200)
 print(p + theme(legend.title = element_blank(), text = element_text(size = 18),
                 title = element_text(size = 11)))
