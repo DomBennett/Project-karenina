@@ -56,9 +56,9 @@ bd_simulate <- function(ntips, b = 3, b_true = 1, d = 1, burnin = 10,
 }
 
 slice_and_save <- function(tree, i, flpth) {
-  # age = 1
+  # age = 164, similar scale to mammals
   spns <- getNdsSlt(tree = tree, slt_nm = 'spn', ids = tree['all'])
-  spns <- spns/getAge(tree)
+  spns <- (spns/getAge(tree))*164
   tree <- setNdsSpn(tree, ids = tree['all'], vals = spns)
   # print(getAge(tree))
   # unique IDs
@@ -66,8 +66,9 @@ slice_and_save <- function(tree, i, flpth) {
   new_ids <- paste0(i, '_', ids)
   tree <- setNdsID(tree, ids = ids, vals = new_ids)
   # slice, only consider second half of tree to ignore burnin
-  intrvls <- 0.5/ncuts
-  time_cuts <- seq(intrvls, 0.5, intrvls)
+  halfage <- getAge(tree)/2
+  intrvls <- halfage/ncuts
+  time_cuts <- seq(intrvls, halfage, intrvls)
   ed_slice <- calcEDBySlice(tree, time_cuts)
   # save
   save(ed_slice, file = file.path(flpth, paste0(i, '.RData')))

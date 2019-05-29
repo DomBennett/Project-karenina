@@ -42,22 +42,6 @@ pan_data <- makeMdlData(flpth = pan_dir)
 de_data <- makeMdlData(flpth = de_dir)
 pf_data <- makeMdlData(flpth = pf_dir)
 
-# Plot ----
-library(ggplot2)
-all_data <- rbind(bd_data, pan_data, de_data, pf_data)
-all_data$type <- c(rep('bd', nrow(bd_data)),
-                   rep('pan', nrow(pan_data)),
-                   rep('de', nrow(de_data)),
-                   rep('pf', nrow(pf_data)))
-all_data$id <- paste0(all_data$type, '_', all_data$id)
-# drop multiples
-all_data <- all_data[duplicated(all_data$id), ]
-# individual
-ggplot(all_data, aes(x = t0, y = t1)) +
-  geom_point() +
-  geom_smooth() +
-  geom_abline(slope = 1) +
-  facet_grid(~type) + theme(legend.position = 'none')
-# linear
-ggplot(all_data, aes(x = t0, y = t1, colour = type)) +
-  geom_smooth(method = 'loess') + geom_abline(slope = 1)
+# Save ----
+save(bd_data, pan_data, de_data, pf_data,
+     file = file.path('additional_analysis', 'sim_results.RData'))
