@@ -80,6 +80,7 @@ genus_data <- order_data[!is.na(order_data[['genus']]), ]
 genus_data$age <- log(genus_data$age)
 genus_data$n <- log(genus_data$n)
 genus_data$tm <- log(genus_data$tm)
+# sort data
 # t0 dummy, rounded t0 between 0 and 1
 # I found this method better than other methods because it does not over-represent
 # the extreme values
@@ -173,7 +174,6 @@ t.test(genus_data$tm[as.logical(genus_data$fssl_nd)],
        genus_data$tm[!as.logical(genus_data$fssl_nd)])
 # yes, presumably because fossil nodes went extinct, while ones in the tree survived
 
-
 # MODEL SELECTION ----
 # obs linear model
 m0 <- lm(t1~t0, data=genus_data)
@@ -265,8 +265,21 @@ n1j <- lmer(t1~t0_dummy+tm+n+(t0_dummy|order/genus)+(tm|genus),
             data=genus_data, REML=FALSE)
 anova(n1j, n1g)
 AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h, n1i, n1j)
-# opt for n1g
-exp_mdl <- n1g
+# polynomial
+# optimisation error
+# n2a <- lmer(t1~poly(t0_dummy, 2)+tm+n+(t0_dummy|genus)+(tm|genus),
+#             data = genus_data, REML=FALSE)
+# n2b <- lmer(t1~poly(t0_dummy, 3)+tm+n+(t0_dummy|genus)+(tm|genus),
+#             data = genus_data, REML=FALSE)
+n2a <- lmer(t1~poly(t0_dummy, 2)+tm+n+(t0_dummy|genus),
+            data=genus_data, REML=FALSE)
+n2b <- lmer(t1~poly(t0_dummy, 3)+tm+n+(t0_dummy|genus),
+            data=genus_data, REML=FALSE)
+n2c <- lmer(t1~poly(t0_dummy, 4)+tm+n+(t0_dummy|genus),
+            data=genus_data, REML=FALSE)
+anova(n2a, n2b, n2c)
+# significant, but minor gains
+exp_mdl <- n2a
 save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
 
 # OPTED MODELS ----
@@ -317,21 +330,23 @@ theme_settings <- theme_bw() +
   theme(legend.title = element_blank(), text = element_text(size = 18),
         title = element_text(size = 11))
 p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
-                            ymax = upper_ed)) + 
-  geom_line(lwd = 2) +
-  geom_ribbon(alpha = .1) +
-  geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
-            lty = 2) +
-  xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.4)
+                             ymax = upper_ed)) + 
+  geom_line(mapping = aes(x = t0, y = expected_ed)) +
+  geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.75) +
+  geom_ribbon(alpha = .25) +
+  geom_line(lwd = 2, colour = '#f4663f') +
+  xlab(expression('log(ED'['t0']~')')) +
+  ylab(expression('log(ED'['t1']~')')) +
+  theme_settings + ylim(0.9, 5.4)
 p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
-                            ymax = upper_ed)) + 
-  geom_line(lwd = 2) +
-  geom_ribbon(alpha = .1) +
-  geom_line(mapping = aes(x = t0, y = expected_ed), lwd = 2,
-            lty = 2) +
-  xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) + theme_settings + ylim(0.9, 5.4)
+                             ymax = upper_ed)) + 
+  geom_line(mapping = aes(x = t0, y = expected_ed)) +
+  geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.75) +
+  geom_ribbon(alpha = .25) +
+  geom_line(lwd = 2, colour = '#f4663f') +
+  xlab(expression('log(ED'['t0']~')')) +
+  ylab(expression('log(ED'['t1']~')')) +
+  theme_settings + ylim(0.9, 5.4)
 tiff(file.path('4_model', 'overall.tiff'), width=18, height=9, units="cm",
      res=1200)
 grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2i)')),
@@ -342,12 +357,13 @@ dev.off()
 p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
                       pfit=median(pfit), nfit=median(nfit))
 p <- ggplot(p_data, aes(x=t0, y=pfit)) + 
-  geom_line(aes(y=pfit), lwd=1) +
-  geom_line(aes(y=nfit), lwd=1, lty=2) +
-  xlab(expression('ED'['t0'])) +
-  ylab(expression('ED'['t1'])) +
+  geom_line(mapping = aes(x = t0, y = nfit), lwd = 0.75) +
+  geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.25) +
+  geom_line(colour = '#f4663f') +
+  xlab(expression('log(ED'['t0']~')')) +
+  ylab(expression('log(ED'['t1']~')')) +
   theme_bw()
-p <- p + facet_grid(epoch ~ .)
+p <- p + facet_wrap(epoch ~ ., ncol = 2)
 tiff(file.path('4_model', 'by_epoch.tiff'), width=9, height=14, units="cm",
      res=1200)
 print(p + theme(text=element_text(size=6)))

@@ -2,6 +2,7 @@
 library(ggplot2)
 library(gridExtra)
 library(ghibli)
+# remotes::install_github('ewenme/ghibli')
 
 # Functions ----
 predict_t1 <- function(p_data, pull, mdl) {
@@ -54,22 +55,27 @@ dev.off()
 m1 <- lm(t1 ~ t0, data = bd_data)
 m2 <- lm(t1 ~ poly(t0, 2), data = bd_data)
 m3 <- lm(t1 ~ poly(t0, 3), data = bd_data)
-anova(m1, m2, m3)
-bd_mdl <- m2
+m4 <- lm(t1 ~ poly(t0, 4), data = bd_data)
+anova(m1, m2, m3, m4)
+bd_mdl <- m3
 # pan
 m1 <- lm(t1 ~ t0, data = pan_data)
 m2 <- lm(t1 ~ poly(t0, 2), data = pan_data)
 m3 <- lm(t1 ~ poly(t0, 3), data = pan_data)
 m4 <- lm(t1 ~ poly(t0, 4), data = pan_data)
-anova(m1, m2, m3, m4)
-pan_mdl <- m3
+m5 <- lm(t1 ~ poly(t0, 5), data = pan_data)
+m6 <- lm(t1 ~ poly(t0, 6), data = pan_data)
+anova(m1, m2, m3, m4, m5, m6)
+pan_mdl <- m5
 # de
 m1 <- lm(t1 ~ t0, data = de_data)
 m2 <- lm(t1 ~ poly(t0, 2), data = de_data)
 m3 <- lm(t1 ~ poly(t0, 3), data = de_data)
 m4 <- lm(t1 ~ poly(t0, 4), data = de_data)
-anova(m1, m2, m3, m4)
-de_mdl <- m3
+m5 <- lm(t1 ~ poly(t0, 5), data = de_data)
+m6 <- lm(t1 ~ poly(t0, 6), data = de_data)
+anova(m1, m2, m3, m4, m5, m6)
+de_mdl <- m4
 # pf
 m1 <- lm(t1 ~ t0, data = pf_data)
 m2 <- lm(t1 ~ poly(t0, 2), data = pf_data)
@@ -97,12 +103,19 @@ p_data <- predict_t1(p_data = p_data, pull = p_data$type == 'Rel.',
                      mdl = de_mdl)
 p_data <- predict_t1(p_data = p_data, pull = p_data$type == 'P.F.',
                      mdl = pf_mdl)
+# add expected null
+expected_t1 <- p_data$t1[p_data$type == 'Null']
+p_data$expected_t1 <- NA
+p_data$expected_t1[p_data$type == 'Pan.'] <- expected_t1
+p_data$expected_t1[p_data$type == 'Rel.'] <- expected_t1
+p_data$expected_t1[p_data$type == 'P.F.'] <- expected_t1
 
 # Plot ----
 p <- ggplot(p_data, aes(x = t0, y = t1, ymin = t1_lower, ymax = t1_upper)) +
-  geom_abline(slope = 1, linetype = 2, lwd = 1) +
+  geom_abline(slope = 1, linetype = 3, lwd = .75, alpha = .75) +
+  geom_line(aes(y = expected_t1)) +
   geom_line(lwd = 1.5, aes(colour = type)) + facet_wrap(~ type, ncol = 2) +
-  geom_ribbon(alpha = .1, aes(fill = type)) + theme_bw() +
+  geom_ribbon(alpha = .5) + theme_bw() +
   scale_colour_ghibli_d("MarnieMedium1") + theme(legend.position = 'none') +
   xlab(expression('log(ED'['t0']~')')) +
   ylab(expression('log(ED'['t1']~')'))
