@@ -28,6 +28,10 @@ all_data$type <- factor(all_data$type,
 all_data$id <- paste0(all_data$type, '_', all_data$id)
 # drop multiples
 #all_data <- all_data[duplicated(all_data$id), ]
+# reduce size
+# nobs <- nrow(all_data)
+# p10 <- floor(nobs * 0.01)
+# all_data <- all_data[sample(seq_len(nobs), p10), ]
 # individual
 p1 <- ggplot(all_data, aes(x = t0, y = t1)) +
   geom_point(alpha = 0.05) +

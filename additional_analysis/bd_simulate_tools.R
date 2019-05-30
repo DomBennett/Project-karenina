@@ -28,7 +28,6 @@ bd_simulate <- function(ntips, b = 3, b_true = 1, d = 1, burnin = 10,
       fps <- calcPrtFrPrp(tree, tids = extnt, ignr = extnct)
       sp_prob <- switch(type, pan = 1/fps, de = 1/fps, eph = fps, pf = fps)
       ex_prob <- switch(type, pan = 1/fps, de = fps, eph = fps, pf = 1/fps)
-      
     } else {
       ex_prob <- sp_prob <- NULL
     }
