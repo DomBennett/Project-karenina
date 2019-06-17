@@ -28,6 +28,17 @@ cat('\nResearching tree ....')
 tree <- readTree(file.path(input.dir, treefile), wndmtrx = FALSE)
 tree_age <- getAge(tree)
 tree_tips <- tree['tips']
+# ----
+# Reviewer comment: how many ranks?
+# nms <- sample(tree_tips, 1000)
+# res <- taxaResolve(nms, cache = TRUE, parent = parent)
+# res <- res[!is.na(res[['score']]), ]
+# ranks <- strsplit(x = res[['rank']], split = '\\|')
+# mammal_ranks <- lapply(X = ranks, FUN = function(x) {
+#   x[which(x == 'class'):length(x)]
+# })
+# length(unique(unlist(mammal_ranks))) - 2
+# ----
 txnyms <- searchTxnyms(tree, cache = TRUE, parent = parent)
 wtxnyms <- sum(!is.na(txnyms))
 # give parent ID to those with missing txnym
