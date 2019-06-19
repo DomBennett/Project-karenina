@@ -247,30 +247,18 @@ n1b <- lmer(t1~t0_dummy+tm+n+(1|genus), data=genus_data, REML=FALSE)
 n1c <- lmer(t1~t0_dummy+tm+n+(1|id), data=genus_data, REML=FALSE)
 anova(n1a, n1b)
 anova(n1b, n1c)
+AIC(n1a, n1b, n1c)
 n1d <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus), data=genus_data, REML=FALSE)
 n1e <- lmer(t1~t0_dummy+tm+n+(tm|genus), data=genus_data, REML=FALSE)
 n1f <- lmer(t1~t0_dummy+tm+n+(n|genus), data=genus_data, REML=FALSE)
 anova(n1b, n1d)
 anova(n1e, n1d)
 anova(n1f, n1e)
-n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(tm|genus), data=genus_data,
+AIC(n1d, n1e, n1f)
+# optimisation error
+n1g <- lmer(t1~t0_dummy+tm+n+(t0_dummy|genus)+(1|genus), data=genus_data,
             REML=FALSE)
-anova(n1e, n1g)
-n1h <- lmer(t1~t0_dummy+tm+n+(1|order/genus), data=genus_data, REML=FALSE)
-anova(n1h, n1g)
-n1i <- lmer(t1~t0_dummy+tm+n+(tm|order/genus), data=genus_data, REML=FALSE)
-anova(n1i, n1g)
-# optimisation error
-n1j <- lmer(t1~t0_dummy+tm+n+(t0_dummy|order/genus)+(tm|genus),
-            data=genus_data, REML=FALSE)
-anova(n1j, n1g)
-AIC(n1a, n1b, n1c, n1d, n1e, n1f, n1g, n1h, n1i, n1j)
 # polynomial
-# optimisation error
-# n2a <- lmer(t1~poly(t0_dummy, 2)+tm+n+(t0_dummy|genus)+(tm|genus),
-#             data = genus_data, REML=FALSE)
-# n2b <- lmer(t1~poly(t0_dummy, 3)+tm+n+(t0_dummy|genus)+(tm|genus),
-#             data = genus_data, REML=FALSE)
 n2a <- lmer(t1~poly(t0_dummy, 2)+tm+n+(t0_dummy|genus),
             data=genus_data, REML=FALSE)
 n2b <- lmer(t1~poly(t0_dummy, 3)+tm+n+(t0_dummy|genus),
@@ -278,8 +266,9 @@ n2b <- lmer(t1~poly(t0_dummy, 3)+tm+n+(t0_dummy|genus),
 n2c <- lmer(t1~poly(t0_dummy, 4)+tm+n+(t0_dummy|genus),
             data=genus_data, REML=FALSE)
 anova(n2a, n2b, n2c)
+AIC(n2a, n2b, n2c)
 # significant, but minor gains
-exp_mdl <- n2a
+exp_mdl <- n2b
 save(exp_mdl, file=file.path('4_model', 'exp_mdl.RData'))
 
 # OPTED MODELS ----
