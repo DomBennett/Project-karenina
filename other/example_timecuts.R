@@ -38,7 +38,7 @@ slice <- function(tree, tm_ct) {
 }
 
 # PARAMETERS
-parent <- 'Hominoidea'
+parent <- 'Mammalia'
 
 # DIRS
 input_dir <- '1_pin'
@@ -58,6 +58,10 @@ tree_file <- file.path(input_dir, paste0(parent, '_real'), pinfile)
 # LOAD
 load(tree_file)
 
+# HOMINOIDEA
+nid <- 'n2960' # Hominoidea node
+tree <- getSubtree(tree, nid)
+
 # SLICE
 # Miocene
 slcd_1 <- slice(tree, 14.1815)
@@ -69,7 +73,9 @@ pdf(file=file.path('other', 'reconstructions.pdf'), w=7, h=15)
 par(mfrow=c(3,1))
 plot(as(tree, 'phylo'), main='Eocene - Present', cex=0.5)
 ape::axisPhylo()
-par(mar=c(2, 0.1, 1, 0.1))
+par(mfrow=c(3,1))
 plot(as(slcd_1, 'phylo'), main='Miocene (14 MYA)', cex=1.1)
+ape::axisPhylo()
 plot(as(slcd_2, 'phylo'), main='Pleistocene (1.3 MYA)', cex=1.1)
+ape::axisPhylo()
 dev.off()
