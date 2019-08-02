@@ -311,36 +311,39 @@ fitted_type <- c(rep('Polynomial', nrow(p_data)),
                  rep('Expected', nrow(p_data)))
 poly_pdata <- data.frame(t0 = p_data$t0, type = 'Polynomial',
                          med_ed = p_data$pmed, upper_ed = p_data$pupper,
-                         lower_ed = p_data$plower, expected_ed = p_data$nmed)
+                         lower_ed = p_data$plower, expected_ed = p_data$nmed,
+                         expected_upper = p_data$nupper,
+                         expected_lower = p_data$nlower)
 line_pdata <- data.frame(t0 = p_data$t0, type = 'Linear',
                          med_ed = p_data$lmed, upper_ed = p_data$lupper,
                          lower_ed = p_data$llower, expected_ed = p_data$nmed)
 theme_settings <- theme_bw() +
   theme(legend.title = element_blank(), text = element_text(size = 18),
         title = element_text(size = 11))
-p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
-                             ymax = upper_ed)) + 
+p1 <- ggplot(poly_pdata, aes(x = t0, y = med_ed)) + 
   geom_line(mapping = aes(x = t0, y = expected_ed)) +
+  geom_ribbon(mapping = aes(ymin = expected_lower,
+                            ymax = expected_upper), alpha = .25) +
   geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.75) +
-  geom_ribbon(alpha = .25) +
   geom_line(lwd = 2, colour = '#f4663f') +
+  geom_ribbon(mapping = aes(ymin = lower_ed,
+                            ymax = upper_ed), alpha = .25,
+              fill = '#f4663f') +
   xlab(expression('log(ED'['t0']~')')) +
   ylab(expression('log(ED'['t1']~')')) +
   theme_settings + ylim(0.9, 5.4)
-p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
-                             ymax = upper_ed)) + 
-  geom_line(mapping = aes(x = t0, y = expected_ed)) +
-  geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.75) +
-  geom_ribbon(alpha = .25) +
-  geom_line(lwd = 2, colour = '#f4663f') +
-  xlab(expression('log(ED'['t0']~')')) +
-  ylab(expression('log(ED'['t1']~')')) +
-  theme_settings + ylim(0.9, 5.4)
-tiff(file.path('4_model', 'overall.tiff'), width=18, height=9, units="cm",
+# p2 <- ggplot(line_pdata, aes(x = t0, y = med_ed, ymin = lower_ed,
+#                              ymax = upper_ed)) + 
+#   geom_line(mapping = aes(x = t0, y = expected_ed)) +
+#   geom_abline(slope = 1, lty = 3, alpha = 0.75, lwd = 0.75) +
+#   geom_ribbon(alpha = .25) +
+#   geom_line(lwd = 2, colour = '#f4663f') +
+#   xlab(expression('log(ED'['t0']~')')) +
+#   ylab(expression('log(ED'['t1']~')')) +
+#   theme_settings + ylim(0.9, 5.4)
+tiff(file.path('4_model', 'overall.tiff'), width=9, height=9, units="cm",
      res=1200)
-grid.arrange(p2 + ggtitle(label = paste0('Best observed linear (m2i)')),
-             p1 + ggtitle(label = 'Best observed nonlinear (m3b)') + ylab(''),
-             nrow = 1, ncol = 2)
+p1 + ggtitle(label = 'Best observed nonlinear (m3b)') + ylab('')
 dev.off()
 # by epoch
 p_data <- plyr::ddply(rpsnttv, c('t0', 'epoch'), plyr::summarise,
