@@ -5,6 +5,11 @@ are each evolutionarily distinct species distinct in their own unique way?
 We answer this by modelling the evolutioanry distinctness of clades between
 two time points.
 
+![](https://upload.wikimedia.org/wikipedia/commons/8/8a/Porc_formiguer.JPG)
+
+> Aardvark (*Orycteropus afer*): An evolutionarily distinct mammal featured
+here to make the page more visually interesting.
+
 ## Details
 
 **Study group**: mammals
@@ -35,6 +40,11 @@ Rscript run.R &> log &
 * 2_slice: calculate evolutionary distinctness at different epochs
 * 3_wrngl: wrangle and merge data for modelling
 * 4_model: model results
+
+### Additional analysis
+
+`additional_analysis` contains extra scripts for producing time slices using different simulated
+birth-death trees.
 
 ## Dir Structure
 
@@ -67,7 +77,12 @@ Results from each stage will be saved in folders named after each stage.
 
 ## Reference
 
-*In progress....*
+Bennett DJ, Sutton MD, Turvey ST. 2019 How the past impacts the future: modelling the performance of evolutionarily distinct mammals through time. *Phil. Trans. R. Soc. B* 20190210. [DOI](http://dx.doi.org/10.1098/rstb.2019.0210)
 
 ## Author
+
 D.J. Bennett
+
+### Notes
+
+Project name originates from the first line of [Tolstoy's "Anna Karenina"](https://en.wikipedia.org/wiki/Anna_Karenina): *Happy families are all alike; every unhappy family is unhappy in its own way.* Are evolutionarily distinct taxa each distinct in their own way?
